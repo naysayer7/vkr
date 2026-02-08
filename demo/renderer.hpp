@@ -1,6 +1,6 @@
 #pragma once
+#include <string>
 #include "state.hpp"
-
 #include "imgui.h"
 
 struct Camera2D
@@ -47,6 +47,7 @@ public:
         if (m_AppState.m_Objects.size() > 10000)
             return;
 
+        ImGui::PushFont(NULL, 12.0f * camera.zoom);
         for (const rtree::Object<2, float> &obj : m_AppState.m_Objects)
         {
             const float x = obj.mbr.start[0];
@@ -57,6 +58,7 @@ public:
             const ImVec2 p0 = camera.WorldToScreen(ImVec2(x, y), viewportMin, viewportMax);
             const ImVec2 p1 = camera.WorldToScreen(ImVec2(x + w, y + h), viewportMin, viewportMax);
             dl->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_PlotHistogram), 0.0f, 0, 2.0f * camera.zoom);
+            dl->AddText(ImVec2(p0.x + 2.0f * camera.zoom, p0.y + 2.0f * camera.zoom), ImGui::GetColorU32(ImGuiCol_Text), std::to_string(obj.id).c_str());
         }
 
         // Tree
@@ -82,5 +84,7 @@ public:
             dl->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), ImGui::GetColorU32(ImGuiCol_Text), 2.0f * camera.zoom);
             dl->AddLine(ImVec2(p0.x, p1.y), ImVec2(p1.x, p0.y), ImGui::GetColorU32(ImGuiCol_Text), 2.0f * camera.zoom);
         }
+
+        ImGui::PopFont();
     }
 };
