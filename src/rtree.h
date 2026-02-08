@@ -200,16 +200,33 @@ namespace rtree
             }
 
             bool first = true;
-            node->mbr = RectangleType{};
             for (const NodeType *child : node->children)
             {
                 if (!child)
                     continue;
-                node->mbr.Unite(child->mbr);
+                if (first)
+                {
+                    node->mbr = child->mbr;
+                    first = false;
+                }
+                else
+                {
+                    node->mbr.Unite(child->mbr);
+                }
             }
 
             for (const auto &obj : node->objects)
-                node->mbr.Unite(obj.mbr);
+            {
+                if (first)
+                {
+                    node->mbr = obj.mbr;
+                    first = false;
+                }
+                else
+                {
+                    node->mbr.Unite(obj.mbr);
+                }
+            }
         }
 
         /**
