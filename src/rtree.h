@@ -391,7 +391,7 @@ namespace rtree
             RectangleType mbrA = groupA[0].mbr;
             RectangleType mbrB = groupB[0].mbr;
 
-            const int minFill = minObjectsPerNode;
+            const size_t minFill = minObjectsPerNode;
 
             for (std::size_t remaining = entries.size() - 2; remaining > 0;)
             {
@@ -496,7 +496,7 @@ namespace rtree
             RectangleType mbrA = entries[seeds.a]->mbr;
             RectangleType mbrB = entries[seeds.b]->mbr;
 
-            const int minFill = minObjectsPerNode;
+            const size_t minFill = minObjectsPerNode;
 
             for (std::size_t remaining = entries.size() - 2; remaining > 0;)
             {
