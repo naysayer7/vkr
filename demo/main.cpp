@@ -148,6 +148,6 @@ ImFont *loadFont()
 {
     ImGuiIO &io = ImGui::GetIO();
     ImFontConfig fontConfig;
-    fontConfig.FontDataOwnedByAtlas = false; // We manage the memory of the embedded font
-    return io.Fonts->AddFontFromMemoryTTF((void *)font_data, static_cast<int>(font_data_len), 0.0f, &fontConfig);
+    fontConfig.FontDataOwnedByAtlas = false; // Памятью шрифта управлет не ImGui 
+    return io.Fonts->AddFontFromMemoryTTF((void *)font_data, static_cast<int>(font_data_len), 22.0f, &fontConfig);
 }
