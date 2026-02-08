@@ -9,6 +9,10 @@
 
 #include "widgets.hpp"
 
+extern unsigned char font_data[];
+extern unsigned int font_data_len;
+ImFont *loadFont();
+
 int main(int argc, char *argv[])
 {
     // argc argv не используются
@@ -45,6 +49,10 @@ int main(int argc, char *argv[])
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigWindowsMoveFromTitleBarOnly = true;
+
+    ImFont *font = loadFont();
+    if (font)
+        io.FontDefault = font;
 
     ImGui::StyleColorsLight();
 
@@ -134,4 +142,12 @@ int main(int argc, char *argv[])
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
+}
+
+ImFont *loadFont()
+{
+    ImGuiIO &io = ImGui::GetIO();
+    ImFontConfig fontConfig;
+    fontConfig.FontDataOwnedByAtlas = false; // We manage the memory of the embedded font
+    return io.Fonts->AddFontFromMemoryTTF((void *)font_data, static_cast<int>(font_data_len), 0.0f, &fontConfig);
 }

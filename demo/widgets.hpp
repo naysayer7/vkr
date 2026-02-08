@@ -46,11 +46,11 @@ void ViewportWindow::Show()
     AppState &state = AppState::instance();
 
     ImGui::BeginChild("Controls", ImVec2(350, 0), true);
-    ImGui::Text("Objects count: %zu", state.GetObjectsCount());
-    ImGui::Text("Memory used by RTree: %s", FormatMemorySize(state.GetRTreeMemorySize()).c_str());
-    ImGui::Text("Memory per object: %s", FormatMemorySize(static_cast<unsigned int>((double)state.GetRTreeMemorySize() / state.GetObjectsCount())).c_str());
+    ImGui::Text("Кол-во объектов: %zu", state.GetObjectsCount());
+    ImGui::Text("Используемая деревом память: %s", FormatMemorySize(state.GetRTreeMemorySize()).c_str());
+    ImGui::Text("Память на объект: %s", FormatMemorySize(static_cast<unsigned int>((double)state.GetRTreeMemorySize() / state.GetObjectsCount())).c_str());
     ImGui::Separator();
-    ImGui::SliderFloat("Zoom", &m_Camera.zoom, Camera2D::MinZoom(), Camera2D::MaxZoom(), "%.3f", ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("Масштаб", &m_Camera.zoom, Camera2D::MinZoom(), Camera2D::MaxZoom(), "%.3f", ImGuiSliderFlags_Logarithmic);
     ImGui::EndChild();
 
     ImGui::SameLine();
