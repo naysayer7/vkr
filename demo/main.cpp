@@ -45,6 +45,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (!SDL_SetRenderVSync(renderer, 1))
+    {
+        SDL_Log("SDL_SetRenderVSync failed: %s", SDL_GetError());
+    }
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
