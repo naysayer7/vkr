@@ -76,6 +76,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Масштабирование интерфейса в зависимости от DPI дисплея
+    auto sdl_display = SDL_GetPrimaryDisplay();
+    auto sdl_display_scale = SDL_GetDisplayContentScale(sdl_display);
+    ImGui::GetStyle().ScaleAllSizes(sdl_display_scale);
+    io.FontGlobalScale = sdl_display_scale;
+
     bool running = true;
     bool imguiDemoOpen = false;
     ViewportWindow viewport;
@@ -115,7 +121,7 @@ int main(int argc, char *argv[])
         const ImGuiViewport *vp = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(vp->WorkPos);
         ImGui::SetNextWindowSize(vp->WorkSize);
-        ImGui::SetNextWindowViewport(vp->ID);
+
         if (ImGui::Begin("Main window", nullptr,
                          ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus))
         {
@@ -149,5 +155,5 @@ ImFont *loadFont()
     ImGuiIO &io = ImGui::GetIO();
     ImFontConfig fontConfig;
     fontConfig.FontDataOwnedByAtlas = false; // Памятью шрифта управлет не ImGui 
-    return io.Fonts->AddFontFromMemoryTTF((void *)font_data, static_cast<int>(font_data_len), 22.0f, &fontConfig);
+    return io.Fonts->AddFontFromMemoryTTF((void *)font_data, static_cast<int>(font_data_len), 0.0f, &fontConfig);
 }

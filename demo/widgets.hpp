@@ -45,7 +45,7 @@ void ViewportWindow::Show()
 {
     AppState &state = AppState::instance();
 
-    ImGui::BeginChild("Controls", ImVec2(350, 0), true);
+    ImGui::BeginChild("Controls", ImVec2(600, 0), true);
     ImGui::Text("Кол-во объектов: %zu", state.GetObjectsCount());
     ImGui::Text("Используемая деревом память: %s", FormatMemorySize(state.GetRTreeMemorySize()).c_str());
     ImGui::Text("Память на объект: %s", FormatMemorySize(static_cast<unsigned int>((double)state.GetRTreeMemorySize() / state.GetObjectsCount())).c_str());
