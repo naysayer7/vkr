@@ -300,11 +300,7 @@ namespace rtree
             return nullptr;
         }
 
-        struct SeedPair
-        {
-            std::size_t a = 0;
-            std::size_t b = 1;
-        };
+        using SeedPair = std::pair<std::size_t, std::size_t>;
 
         /**
          * Линейный алгоритм выбора семян для разбиения узла (Guttman).
@@ -312,9 +308,8 @@ namespace rtree
         template <typename EntryVec, typename RectFn>
         SeedPair PickSeedsLinear(const EntryVec &entries, RectFn getRect) const
         {
-            // Linear split seed picking (Guttman). Choose dimension with largest normalized separation.
-            T bestSep = -1.0f;
-            SeedPair best{0, entries.size() > 1 ? 1u : 0u};
+            T bestSeparation = -1.0f;
+            SeedPair bestSeeds{0, entries.size() > 1 ? 1u : 0u};
 
             for (std::size_t dim = 0; dim < N; ++dim)
             {
@@ -350,19 +345,19 @@ namespace rtree
                     continue;
 
                 const T sep = (maxEnd - minStart) / width;
-                if (sep > bestSep)
+                if (sep > bestSeparation)
                 {
-                    bestSep = sep;
-                    best = SeedPair{idxMinStart, idxMaxEnd};
+                    bestSeparation = sep;
+                    bestSeeds = SeedPair{idxMinStart, idxMaxEnd};
                 }
             }
 
-            if (best.a == best.b)
+            if (bestSeeds.first == bestSeeds.second)
             {
-                best.a = 0;
-                best.b = entries.size() > 1 ? 1u : 0u;
+                bestSeeds.first = 0;
+                bestSeeds.second = entries.size() > 1 ? 1u : 0u;
             }
-            return best;
+            return bestSeeds;
         }
 
         NodeType *SplitLeaf(NodeType *node)
@@ -380,13 +375,13 @@ namespace rtree
             std::vector<ObjectType> groupB;
             groupA.reserve(entries.size());
             groupB.reserve(entries.size());
-            groupA.push_back(entries[seeds.a]);
-            groupB.push_back(entries[seeds.b]);
+            groupA.push_back(entries[seeds.first]);
+            groupB.push_back(entries[seeds.second]);
 
             // Mark seeds as used.
             std::vector<bool> used(entries.size(), false);
-            used[seeds.a] = true;
-            used[seeds.b] = true;
+            used[seeds.first] = true;
+            used[seeds.second] = true;
 
             RectangleType mbrA = groupA[0].mbr;
             RectangleType mbrB = groupB[0].mbr;
@@ -486,15 +481,15 @@ namespace rtree
             std::vector<NodeType *> groupB;
             groupA.reserve(entries.size());
             groupB.reserve(entries.size());
-            groupA.push_back(entries[seeds.a]);
-            groupB.push_back(entries[seeds.b]);
+            groupA.push_back(entries[seeds.first]);
+            groupB.push_back(entries[seeds.second]);
 
             std::vector<bool> used(entries.size(), false);
-            used[seeds.a] = true;
-            used[seeds.b] = true;
+            used[seeds.first] = true;
+            used[seeds.second] = true;
 
-            RectangleType mbrA = entries[seeds.a]->mbr;
-            RectangleType mbrB = entries[seeds.b]->mbr;
+            RectangleType mbrA = entries[seeds.first]->mbr;
+            RectangleType mbrB = entries[seeds.second]->mbr;
 
             const size_t minFill = minObjectsPerNode;
 
