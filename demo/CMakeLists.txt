@@ -9,4 +9,4 @@ add_custom_command(
 )
 
 add_executable(rtree_demo main.cpp ${FONT_CPP})
-target_link_libraries(rtree_demo PRIVATE rtree_lib SDL3::SDL3-static imgui)
+target_link_libraries(rtree_demo PRIVATE rtree_lib SDL3::SDL3-static imgui tinyfiledialogs)

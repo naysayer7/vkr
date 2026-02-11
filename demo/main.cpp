@@ -1,17 +1,22 @@
 #define SDL_MAIN_HANDLED
 
+#include <thread>
+#include <print>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <tinyfiledialogs.h>
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
 
 #include "widgets.hpp"
+#include "filetools.hpp"
 
 extern unsigned char font_data[];
 extern unsigned int font_data_len;
 ImFont *loadFont();
+void LoadCsvFile();
 
 int main(int argc, char *argv[])
 {
@@ -90,6 +95,7 @@ int main(int argc, char *argv[])
     bool running = true;
     bool imguiDemoOpen = false;
     ViewportWindow viewport;
+    AppState &state = AppState::instance();
 
     while (running)
     {
@@ -110,6 +116,8 @@ int main(int argc, char *argv[])
         {
             if (ImGui::BeginMenu("File"))
             {
+                if (ImGui::MenuItem("Load csv file"))
+                    LoadCsvFile();
                 if (ImGui::MenuItem("Exit"))
                     running = false;
                 ImGui::EndMenu();
@@ -130,7 +138,27 @@ int main(int argc, char *argv[])
         if (ImGui::Begin("Main window", nullptr,
                          ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus))
         {
-            viewport.Show();
+            if (state.m_FileLoadingState.loading)
+            {
+                if (state.m_FileLoadingState.fileRead)
+                {
+                    ImGui::Text("Inserting objects into RTree... %zu / %zu", state.m_FileLoadingState.objectsInserted, state.m_Objects.size());
+                    ImGui::ProgressBar(state.m_Objects.size() > 0 ? (float)state.m_FileLoadingState.objectsInserted / state.m_Objects.size() : 0.0f, ImVec2(-1, 0));
+                    if (!state.m_FileLoadingState.errorMessage.empty())
+                        ImGui::Text("Error: %s", state.m_FileLoadingState.errorMessage.c_str());
+                }
+                else
+                {
+                    ImGui::Text("Loading file... %zu / %zu lines read", state.m_FileLoadingState.linesRead, state.m_FileLoadingState.totalLines);
+                    ImGui::ProgressBar(state.m_FileLoadingState.totalLines > 0 ? (float)state.m_FileLoadingState.linesRead / state.m_FileLoadingState.totalLines : 0.0f, ImVec2(-1, 0));
+                    if (!state.m_FileLoadingState.errorMessage.empty())
+                        ImGui::Text("Error: %s", state.m_FileLoadingState.errorMessage.c_str());
+                }
+            }
+            else
+            {
+                viewport.Show();
+            }
         }
         ImGui::End();
 
@@ -159,6 +187,62 @@ ImFont *loadFont()
 {
     ImGuiIO &io = ImGui::GetIO();
     ImFontConfig fontConfig;
-    fontConfig.FontDataOwnedByAtlas = false; // Памятью шрифта управлет не ImGui 
+    fontConfig.FontDataOwnedByAtlas = false; // Памятью шрифта управлет не ImGui
     return io.Fonts->AddFontFromMemoryTTF((void *)font_data, static_cast<int>(font_data_len), 0.0f, &fontConfig);
+}
+
+void ReadCsvFile(const std::string &filePath);
+
+void LoadCsvFile()
+{
+    AppState &state = AppState::instance();
+    const char *selectedPath = tinyfd_openFileDialog("Select CSV file", "", 0, nullptr, nullptr, 0);
+    if (!selectedPath || selectedPath[0] == '\0')
+        return;
+
+    state.m_FileLoadingState.SetStartReading();
+    state.m_Objects.clear();
+    const std::string filePath(selectedPath);
+    std::thread fileLoadingThread(ReadCsvFile, filePath);
+    fileLoadingThread.detach();
+}
+
+void ReadCsvFile(const std::string &filePath)
+{
+    AppState &state = AppState::instance();
+    try
+    {
+        std::ifstream fileStream(filePath);
+        if (!fileStream.is_open())
+            throw std::runtime_error("Failed to open file: " + filePath);
+
+        std::size_t lineCount = Filetools::CountLines(fileStream);
+        state.m_FileLoadingState.totalLines = lineCount;
+        state.m_Objects.reserve(lineCount);
+
+        Filetools::ReadObjectsFromCsvFile<float>(fileStream, state.m_FileLoadingState.linesRead, [&state](rtree::Object<float> &obj)
+                                                 { state.m_Objects.push_back(obj); });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        state.m_FileLoadingState.fileRead = true;
+
+        if (state.m_Objects.empty())
+        {
+            state.m_FileLoadingState.loading = false;
+            return;
+        }
+
+        state.m_RTree = rtree::RTree<float>(4, 2, state.m_Objects.front().mbr.n);
+        for (const auto &obj : state.m_Objects)
+        {
+            state.m_FileLoadingState.objectsInserted++;
+            state.m_RTree.Insert(obj);
+        }
+        state.RecalculateMemorySize();
+        state.m_FileLoadingState.loading = false;
+    }
+    catch (const std::exception &e)
+    {
+        state.m_FileLoadingState.errorMessage = e.what();
+    }
 }

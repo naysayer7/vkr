@@ -48,7 +48,10 @@ void ViewportWindow::Show()
     ImGui::BeginChild("Controls", ImVec2(600, 0), true);
     ImGui::Text("Кол-во объектов: %zu", state.GetObjectsCount());
     ImGui::Text("Используемая деревом память: %s", FormatMemorySize(state.GetRTreeMemorySize()).c_str());
-    ImGui::Text("Память на объект: %s", FormatMemorySize(static_cast<unsigned int>((double)state.GetRTreeMemorySize() / state.GetObjectsCount())).c_str());
+    if (state.GetObjectsCount() > 0)
+        ImGui::Text("Память на объект: %s", FormatMemorySize(static_cast<unsigned int>((double)state.GetRTreeMemorySize() / state.GetObjectsCount())).c_str());
+    else
+        ImGui::Text("Память на объект: 0 B");
     ImGui::Separator();
     ImGui::SliderFloat("Масштаб", &m_Camera.zoom, Camera2D::MinZoom(), Camera2D::MaxZoom(), "%.3f", ImGuiSliderFlags_Logarithmic);
     ImGui::EndChild();

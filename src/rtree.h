@@ -5,33 +5,70 @@
 #include <array>
 #include <algorithm>
 #include <limits>
+#include <memory>
+#include <stdexcept>
 
 namespace rtree
 {
-    template <std::size_t N, typename T = float>
+    template <typename T = float>
     struct Rectangle
     {
-        static_assert(N > 0, "N must be greater than 0");
+        std::unique_ptr<T[]> size = nullptr;
+        const std::size_t n;
 
-        std::array<T, N> start{};
-        std::array<T, N> size{};
+        Rectangle(std::size_t n) : n(n)
+        {
+            size = std::make_unique<T[]>(n * 2);
+        }
 
-        template <std::size_t M = N, typename std::enable_if_t<(M == 2), int> = 0>
+        Rectangle(const Rectangle &other) : n(other.n)
+        {
+            size = std::make_unique<T[]>(n * 2);
+            for (std::size_t i = 0; i < n * 2; ++i)
+                size[i] = other.size[i];
+        }
+
+        Rectangle(Rectangle &&other) noexcept : n(other.n), size(std::move(other.size)) {}
+
+        Rectangle &operator=(const Rectangle &other)
+        {
+            if (this != &other)
+            {
+                for (std::size_t i = 0; i < n * 2; ++i)
+                    size[i] = other.size[i];
+            }
+            return *this;
+        }
+
+        Rectangle &operator=(Rectangle &&other) noexcept
+        {
+            size = std::move(other.size);
+            return *this;
+        }
+
+        void Zero()
+        {
+            for (std::size_t i = 0; i < n * 2; ++i)
+                size[i] = 0.0f;
+        }
+
         static Rectangle FromXYWH(T x, T y, T width, T height)
         {
-            Rectangle rect;
-            rect.start[0] = x;
-            rect.start[1] = y;
-            rect.size[0] = width;
-            rect.size[1] = height;
+            Rectangle rect(2);
+            rect.size[0] = x;
+            rect.size[1] = y;
+            rect.size[2] = width;
+            rect.size[3] = height;
             return rect;
         }
 
         bool Intersects(const Rectangle &other) const
         {
-            for (std::size_t i = 0; i < N; ++i)
+            if (n != other.n)
+                throw std::invalid_argument("Rectangles must have the same number of dimensions for intersection test.");
+            for (std::size_t i = 0; i < n; ++i)
             {
-                if (start[i] + size[i] < other.start[i] || other.start[i] + other.size[i] < start[i])
+                if (End(i) < other.size[i] || other.End(i) < size[i])
                     return false;
             }
             return true;
@@ -39,12 +76,15 @@ namespace rtree
 
         Rectangle &Unite(const Rectangle &other)
         {
-            for (std::size_t i = 0; i < N; ++i)
+            if (n != other.n)
+                throw std::invalid_argument("Rectangles must have the same number of dimensions for union.");
+
+            for (std::size_t i = 0; i < n; ++i)
             {
-                const T minv = std::min(start[i], other.start[i]);
+                const T minv = std::min(size[i], other.size[i]);
                 const T maxv = std::max(End(i), other.End(i));
-                start[i] = minv;
-                size[i] = maxv - minv;
+                size[i] = minv;
+                size[i + n] = maxv - minv;
             }
             return *this;
         }
@@ -57,21 +97,21 @@ namespace rtree
         T Volume() const
         {
             T v = 1.0;
-            for (std::size_t i = 0; i < N; ++i)
-                v *= (size[i] >= 0) ? size[i] : 0;
+            for (std::size_t i = 0; i < n; ++i)
+                v *= (size[i + n] >= 0) ? size[i + n] : 0;
             return v;
         }
 
         T MinDistance(const Rectangle &other) const
         {
             T dist = 0.0;
-            for (std::size_t i = 0; i < N; ++i)
+            for (std::size_t i = 0; i < n; ++i)
             {
                 T di = 0.0;
-                if (End(i) < other.start[i])
-                    di = other.start[i] - End(i);
-                else if (other.End(i) < start[i])
-                    di = start[i] - other.End(i);
+                if (End(i) < other.size[i])
+                    di = other.size[i] - End(i);
+                else if (other.End(i) < size[i])
+                    di = size[i] - other.End(i);
                 dist += di * di;
             }
             return dist;
@@ -79,23 +119,44 @@ namespace rtree
 
         T End(std::size_t axis) const
         {
-            return start[axis] + size[axis];
+            if (axis >= n)
+                throw std::out_of_range("Axis index out of range in Rectangle::End");
+            return size[axis] + size[axis + n];
+        }
+
+        std::size_t MemorySize() const
+        {
+            return sizeof(*this) + BufferMemorySize();
+        }
+        
+        std::size_t BufferMemorySize() const
+        {
+            return n * 2 * sizeof(T);
         }
     };
 
-    template <std::size_t N, typename T>
+    template <typename T>
     struct Object
     {
-        int id;
-        Rectangle<N, T> mbr{};
+        uint64_t id;
+        Rectangle<T> mbr;
+
+        Object(uint64_t id, const Rectangle<T> &mbr) : id(id), mbr(mbr) {}
+
+        std::size_t MemorySize() const
+        {
+            return sizeof(*this) + mbr.BufferMemorySize();
+        }
     };
 
-    template <std::size_t N, typename T>
+    template <typename T>
     struct Node
     {
-        std::vector<Object<N, T>> objects{};
-        std::vector<Node<N, T> *> children{};
-        Rectangle<N, T> mbr{};
+        std::vector<Object<T>> objects{};
+        std::vector<Node<T> *> children{};
+        Rectangle<T> mbr;
+
+        Node(std::size_t n) : mbr(n) {}
 
         bool inline IsLeaf() const { return children.empty(); }
 
@@ -103,35 +164,60 @@ namespace rtree
 
         inline ~Node()
         {
-            for (Node<N, T> *child : children)
+            for (Node<T> *child : children)
                 delete child;
+        }
+
+        /**
+         * Размер памяти, занимаемой узлом, включая его MBR, объекты и указатели на детей. Не включает память, занимаемую потомками.
+         */
+        std::size_t MemorySize() const
+        {
+            std::size_t size = sizeof(*this) + mbr.BufferMemorySize(); // Вычитаем размер пустого mbr, так как он уже учтен в sizeof(*this)
+
+            if (objects.empty() && children.empty())
+                return size;
+
+            if (!objects.empty())
+                size += objects.size() * objects.front().MemorySize();
+            if (!children.empty())
+                size += children.size() * sizeof(children.front());
+
+            return size;
         }
     };
 
-    template <std::size_t N, typename T>
+    template <typename T>
     class RTree
     {
     public:
-        using RectangleType = Rectangle<N, T>;
-        using ObjectType = Object<N, T>;
-        using NodeType = Node<N, T>;
+        using RectangleType = Rectangle<T>;
+        using ObjectType = Object<T>;
+        using NodeType = Node<T>;
 
-        RTree(std::size_t maxObjectsPerNode, std::size_t minObjectsPerNode)
-            : maxObjectsPerNode(maxObjectsPerNode), minObjectsPerNode(minObjectsPerNode)
+        RTree(std::size_t maxObjectsPerNode, std::size_t minObjectsPerNode, std::size_t n)
+            : maxObjectsPerNode(maxObjectsPerNode), minObjectsPerNode(minObjectsPerNode), n(n)
         {
-            root = new NodeType();
+            root = std::make_unique<NodeType>(n);
         }
+
+        RTree(const RTree &) = delete;
+        RTree &operator=(const RTree &) = delete;
+
+        RTree(RTree &&) noexcept = default;
+        RTree &operator=(RTree &&) noexcept = default;
 
         void Insert(const ObjectType &obj)
         {
-            NodeType *split = InsertRecursive(root, obj);
+            NodeType *split = InsertRecursive(root.get(), obj);
             if (split)
             {
-                NodeType *newRoot = new NodeType();
-                newRoot->children.push_back(root);
+                NodeType *oldRoot = root.release();
+                auto newRoot = std::make_unique<NodeType>(n);
+                newRoot->children.push_back(oldRoot);
                 newRoot->children.push_back(split);
-                RecomputeMBR(newRoot);
-                root = newRoot;
+                RecomputeMBR(newRoot.get());
+                root = std::move(newRoot);
             }
         }
 
@@ -142,8 +228,10 @@ namespace rtree
 
         void Dfs(std::function<void(const NodeType *)> func) const
         {
+            if (!root)
+                return;
             std::vector<const NodeType *> stack;
-            stack.push_back(root);
+            stack.push_back(root.get());
 
             while (!stack.empty())
             {
@@ -157,31 +245,39 @@ namespace rtree
             }
         }
 
-        unsigned int MemorySize() const
+        std::size_t MemorySize() const
         {
-            unsigned int size = 0;
+            std::size_t size = 0;
             size += sizeof(*this);
+            std::size_t mbrSize = n * 2 * sizeof(T);
 
-            Dfs([&size](const NodeType *node)
+            Dfs(
+                [&size, &mbrSize](const NodeType *node)
                 {
-                    size += sizeof(NodeType);
-                    size += static_cast<unsigned int>(node->objects.size() * sizeof(ObjectType));
-                    size += static_cast<unsigned int>(node->children.size() * sizeof(NodeType *)); });
+                    if (!node)
+                        return;
+                    size += node->MemorySize();
+                });
 
             return size;
         }
 
+        std::size_t GetN() const
+        {
+            return n;
+        }
+
         ~RTree()
         {
-            delete root;
+            // root and all children are freed automatically.
         }
 
     private:
-        const std::size_t maxObjectsPerNode;
-        const std::size_t minObjectsPerNode;
-        Node<N, T> *root;
+        std::size_t maxObjectsPerNode;
+        std::size_t minObjectsPerNode;
+        std::size_t n;
+        std::unique_ptr<Node<T>> root;
 
-    private:
         static T Enlargement(const RectangleType &current, const RectangleType &added)
         {
             const RectangleType u = current.Union(added);
@@ -195,7 +291,7 @@ namespace rtree
 
             if (node->IsEmpty())
             {
-                node->mbr = RectangleType{};
+                node->mbr = RectangleType(node->mbr.n);
                 return;
             }
 
@@ -311,11 +407,11 @@ namespace rtree
             T bestSeparation = -1.0f;
             SeedPair bestSeeds{0, entries.size() > 1 ? 1u : 0u};
 
-            for (std::size_t dim = 0; dim < N; ++dim)
+            for (std::size_t dim = 0; dim < n; ++dim)
             {
                 std::size_t idxMinStart = 0;
                 std::size_t idxMaxEnd = 0;
-                T minStart = getRect(entries[0]).start[dim];
+                T minStart = getRect(entries[0]).size[dim];
                 T maxEnd = getRect(entries[0]).End(dim);
 
                 T globalMinStart = minStart;
@@ -324,7 +420,7 @@ namespace rtree
                 for (std::size_t i = 1; i < entries.size(); ++i)
                 {
                     const RectangleType r = getRect(entries[i]);
-                    const T s = r.start[dim];
+                    const T s = r.size[dim];
                     const T e = r.End(dim);
                     if (s < minStart)
                     {
@@ -362,7 +458,7 @@ namespace rtree
 
         NodeType *SplitLeaf(NodeType *node)
         {
-            NodeType *sibling = new NodeType();
+            NodeType *sibling = new NodeType(n);
 
             std::vector<ObjectType> entries;
             entries.swap(node->objects);
@@ -468,7 +564,7 @@ namespace rtree
 
         NodeType *SplitInternal(NodeType *node)
         {
-            NodeType *sibling = new NodeType();
+            NodeType *sibling = new NodeType(n);
 
             std::vector<NodeType *> entries;
             entries.swap(node->children);

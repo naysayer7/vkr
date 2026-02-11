@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <cmath>
 #include "state.hpp"
 #include "imgui.h"
 
@@ -10,7 +11,7 @@ struct Camera2D
 
     static constexpr float MinZoom() { return 0.2f; }
     static constexpr float MaxZoom() { return 32.0f; }
-    
+
     ImVec2 ScreenToWorld(const ImVec2 &screen, const ImVec2 &viewportMin, const ImVec2 &viewportMax) const
     {
         const ImVec2 viewportCenter{viewportMin.x + (viewportMax.x - viewportMin.x) * 0.5f, viewportMin.y + (viewportMax.y - viewportMin.y) * 0.5f};
@@ -39,21 +40,86 @@ class DefaultRenderer : public Renderer
 {
     AppState &m_AppState = AppState::instance();
 
+    static inline void AddDashedLine(ImDrawList *dl, ImVec2 a, ImVec2 b, ImU32 col, float thickness, float dashLen, float gapLen)
+    {
+        const float dx = b.x - a.x;
+        const float dy = b.y - a.y;
+        const float len = std::sqrt(dx * dx + dy * dy);
+        if (len <= 0.0f)
+            return;
+
+        const float invLen = 1.0f / len;
+        const float ux = dx * invLen;
+        const float uy = dy * invLen;
+
+        const float step = dashLen + gapLen;
+        if (step <= 0.0f)
+            return;
+
+        for (float s = 0.0f; s < len; s += step)
+        {
+            const float e = (s + dashLen < len) ? (s + dashLen) : len;
+            const ImVec2 p0(a.x + ux * s, a.y + uy * s);
+            const ImVec2 p1(a.x + ux * e, a.y + uy * e);
+            dl->AddLine(p0, p1, col, thickness);
+        }
+    }
+
+    static inline void AddDashedRect(ImDrawList *dl, ImVec2 p0, ImVec2 p1, ImU32 col, float thickness, float dashLen, float gapLen)
+    {
+        const ImVec2 a(p0.x, p0.y);
+        const ImVec2 b(p1.x, p0.y);
+        const ImVec2 c(p1.x, p1.y);
+        const ImVec2 d(p0.x, p1.y);
+        AddDashedLine(dl, a, b, col, thickness, dashLen, gapLen);
+        AddDashedLine(dl, b, c, col, thickness, dashLen, gapLen);
+        AddDashedLine(dl, c, d, col, thickness, dashLen, gapLen);
+        AddDashedLine(dl, d, a, col, thickness, dashLen, gapLen);
+    }
+
 public:
     void Render(ImDrawList *dl, const ImVec2 &viewportMin, const ImVec2 &viewportMax, const Camera2D &camera) override
     {
         if (!dl)
             return;
-        if (m_AppState.m_Objects.size() > 10000)
+        if (m_AppState.m_Objects.empty())
+        {
+            ImGui::PushFont(NULL, 26.0f);
+            dl->AddText(
+                ImVec2(viewportMin.x + 10.0f, viewportMin.y + 10.0f),
+                ImGui::GetColorU32(ImGuiCol_Text),
+                "Нет объектов для отображения");
+            ImGui::PopFont();
             return;
+        }
+        if (m_AppState.m_RTree.GetN() != 2)
+        {
+            ImGui::PushFont(NULL, 26.0f);
+            dl->AddText(
+                ImVec2(viewportMin.x + 10.0f, viewportMin.y + 10.0f),
+                ImGui::GetColorU32(ImGuiCol_Text),
+                ("Размерность объектов(" + std::to_string(m_AppState.m_RTree.GetN()) + ") не равна 2, отображение не поддерживается").c_str());
+            ImGui::PopFont();
+            return;
+        }
+        if (m_AppState.m_Objects.size() > 1000)
+        {
+            ImGui::PushFont(NULL, 26.0f);
+            dl->AddText(
+                ImVec2(viewportMin.x + 10.0f, viewportMin.y + 10.0f),
+                ImGui::GetColorU32(ImGuiCol_Text),
+                "Слишком много объектов для отображения");
+            ImGui::PopFont();
+            return;
+        }
 
         ImGui::PushFont(NULL, 12.0f * camera.zoom / ImGui::GetIO().FontGlobalScale);
-        for (const rtree::Object<2, float> &obj : m_AppState.m_Objects)
+        for (const auto &obj : m_AppState.m_Objects)
         {
-            const float x = obj.mbr.start[0];
-            const float y = obj.mbr.start[1];
-            const float w = obj.mbr.size[0];
-            const float h = obj.mbr.size[1];
+            auto x = obj.mbr.size[0];
+            auto y = obj.mbr.size[1];
+            auto w = obj.mbr.size[2];
+            auto h = obj.mbr.size[3];
 
             const ImVec2 p0 = camera.WorldToScreen(ImVec2(x, y), viewportMin, viewportMax);
             const ImVec2 p1 = camera.WorldToScreen(ImVec2(x + w, y + h), viewportMin, viewportMax);
@@ -62,19 +128,21 @@ public:
         }
 
         // Tree
-        m_AppState.m_RTree.Dfs([&](const rtree::Node<2, float> *node)
-        {
+        m_AppState.m_RTree.Dfs([&](const auto *node)
+                               {
             if (!node)
                 return;
             const float offset = 0.0f;
-            const float x = node->mbr.start[0] - offset;
-            const float y = node->mbr.start[1] - offset;
-            const float w = node->mbr.size[0] + offset * 2;
-            const float h = node->mbr.size[1] + offset * 2;
+            auto x = node->mbr.size[0] - offset;
+            auto y = node->mbr.size[1] - offset;
+            auto w = node->mbr.size[2] + offset * 2;
+            auto h = node->mbr.size[3] + offset * 2;
             const ImVec2 p0 = camera.WorldToScreen(ImVec2(x, y), viewportMin, viewportMax);
             const ImVec2 p1 = camera.WorldToScreen(ImVec2(x + w, y + h), viewportMin, viewportMax);
-            dl->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_PlotLines), 0.0f, 0, 1.0f * camera.zoom);
-        });
+            const float thickness = 1.0f * camera.zoom;
+            const float dashLen = 6.0f * camera.zoom;
+            const float gapLen = 4.0f * camera.zoom;
+            AddDashedRect(dl, p0, p1, ImGui::GetColorU32(ImGuiCol_PlotLines), thickness, dashLen, gapLen); });
 
         // Mouse position
         {

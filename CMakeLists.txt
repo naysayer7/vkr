@@ -51,6 +51,10 @@ add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PUBLIC ${IMGUI_PATH} ${IMGUI_PATH}/backends)
 target_link_libraries(imgui PUBLIC SDL3::SDL3-static)
 
+# --- tinyfiledialogs ---
+add_library(tinyfiledialogs STATIC external/tinyfiledialogs/tinyfiledialogs.c)
+target_include_directories(tinyfiledialogs PUBLIC external/tinyfiledialogs)
+
 # --- Subdirectories ---
 add_subdirectory(src)
 if(BUILD_TESTING)
