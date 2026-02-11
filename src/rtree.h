@@ -104,6 +104,9 @@ namespace rtree
 
         T MinDistance(const Rectangle &other) const
         {
+            if (n != other.n)
+                throw std::invalid_argument("Rectangles must have the same number of dimensions for distance calculation.");
+
             T dist = 0.0;
             for (std::size_t i = 0; i < n; ++i)
             {
