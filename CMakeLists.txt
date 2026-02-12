@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.14)
-project(rtree_project VERSION 0.1.0 LANGUAGES CXX)
+project(rtree_project VERSION 0.1.0 LANGUAGES C CXX)
 
 include(CTest)
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 set(IMGUI_PATH  "./external/imgui")
 set(GOOGLE_TEST_VERSION "v1.17.0")
 set(SDL3_VERSION "3.4.0")
