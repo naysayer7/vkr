@@ -1,59 +1,83 @@
 #pragma once
 #include <vector>
 #include <random>
+#include <mutex>
 
+#include "renderer.hpp"
 #include "rtree.h"
 
-template <typename T>
-struct FileLoadingState {
-    bool loading = false;
-    bool fileRead = false;
-    std::size_t totalLines = 0;
-    std::size_t linesRead = 0;
-    std::size_t objectsInserted = 0;
-    std::string errorMessage = "";
+enum class State
+{
+    MainMenu,
+    Demo,
+    FileReading,
+    BuildingRTree,
+    Testing,
+};
 
-    void SetStartReading() {
-        loading = true;
-        fileRead = false;
-        totalLines = 0;
-        linesRead = 0;
-        objectsInserted = 0;
-        errorMessage = "";
+template <typename T>
+struct BuildingRTreeState
+{
+    std::size_t totalObjects{0};
+    std::size_t handledObjects{0};
+
+    void SetStart()
+    {
+        totalObjects = 0;
+        handledObjects = 0;
+    }
+
+    float GetProgress() const
+    {
+        if (totalObjects == 0)
+            return 0.0f;
+        return static_cast<float>(handledObjects) / static_cast<float>(totalObjects);
+    }
+};
+
+struct DemoState
+{
+    Camera2D m_Camera;
+    DefaultRenderer m_Renderer;
+
+    void Reset()
+    {
+        m_Camera = Camera2D();
     }
 };
 
 class AppState
 {
+    std::mutex m_mutex;
+    State m_currentState{State::MainMenu};
     std::size_t m_MemorySize{0};
     AppState()
     {
-        m_Objects = {
-            /* {0, rtree::Rectangle<float>::FromXYWH(0.0f, 0.0f, 20.0f, 80.0f)},
-            {1, rtree::Rectangle<float>::FromXYWH(40.0f, 0.0f, 20.0f, 80.0f)},
-            {2, rtree::Rectangle<float>::FromXYWH(-30.0f, 10.0f, 55.0f, 20.0f)},
-            {3, rtree::Rectangle<float>::FromXYWH(35.0f, 10.0f, 55.0f, 20.0f)},
-            {4, rtree::Rectangle<float>::FromXYWH(85.0f, 40.0f, 55.0f, 20.0f)},
-            {5, rtree::Rectangle<float>::FromXYWH(125.0f, 80.0f, 55.0f, 20.0f)}, */
-        };
-
-        for (const auto &obj : m_Objects)
-            m_RTree.Insert(obj);
-        m_MemorySize = m_RTree.MemorySize();
     }
 
 public:
+    bool m_ShowImGuiDemo = false;
+    std::size_t m_ObjSize = 0;
+
     ImVec2 m_MouseWorldPos{0.0f, 0.0f};
-    rtree::RTree<float> m_RTree{4, 2, 2};
+    std::unique_ptr<rtree::RTree<float>> m_RTree = nullptr;
     std::vector<rtree::Object<float>> m_Objects;
-    FileLoadingState<float> m_FileLoadingState;
-    
+    BuildingRTreeState<float> m_BuildingRTreeState;
+    DemoState m_DemoState;
+
     void RecalculateMemorySize()
     {
-        m_MemorySize = m_RTree.MemorySize();
+        if (m_RTree)
+            m_MemorySize = m_RTree->MemorySize();
+        else
+            m_MemorySize = 0;
+
+        m_ObjSize = 0;
+        for (const auto &obj : m_Objects)
+            m_ObjSize += obj.MemorySize();
     }
 
-    unsigned int GetRTreeMemorySize() const
+    std::size_t GetRTreeMemorySize() const
     {
         return m_MemorySize;
     }
@@ -61,6 +85,26 @@ public:
     size_t GetObjectsCount() const
     {
         return m_Objects.size();
+    }
+
+    void SetStartFileReading()
+    {
+        m_RTree.reset();
+        m_currentState = State::FileReading;
+        m_Objects.clear();
+        m_BuildingRTreeState.SetStart();
+    }
+
+    void SetCurrentState(State newState)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_currentState = newState;
+    }
+
+    State GetCurrentState()
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_currentState;
     }
 
     static AppState &instance()

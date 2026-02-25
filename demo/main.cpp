@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <tinyfiledialogs.h>
+#include <npy.hpp>
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
@@ -17,6 +18,12 @@ extern unsigned char font_data[];
 extern unsigned int font_data_len;
 ImFont *loadFont();
 void LoadCsvFile();
+void MainMenu(bool &running, AppState &state);
+void Demo(bool &running, AppState &state);
+void BuildingRTree(bool &running, AppState &state);
+void FileReading(bool &running, AppState &state);
+void Evaluation(bool &running, AppState &state);
+void LoadNpyFile();
 
 int main(int argc, char *argv[])
 {
@@ -93,8 +100,6 @@ int main(int argc, char *argv[])
     io.FontGlobalScale = sdl_display_scale;
 
     bool running = true;
-    bool imguiDemoOpen = false;
-    ViewportWindow viewport;
     AppState &state = AppState::instance();
 
     while (running)
@@ -111,60 +116,29 @@ int main(int argc, char *argv[])
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        // Main menu
-        if (ImGui::BeginMainMenuBar())
+        if (state.m_ShowImGuiDemo)
+            ImGui::ShowDemoWindow(&state.m_ShowImGuiDemo);
+
+        switch (state.GetCurrentState())
         {
-            if (ImGui::BeginMenu("File"))
-            {
-                if (ImGui::MenuItem("Load csv file"))
-                    LoadCsvFile();
-                if (ImGui::MenuItem("Exit"))
-                    running = false;
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Window"))
-            {
-                ImGui::MenuItem("ImGui Demo", nullptr, &imguiDemoOpen);
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
+        case State::MainMenu:
+            MainMenu(running, state);
+            break;
+        case State::Demo:
+            Demo(running, state);
+            break;
+        case State::BuildingRTree:
+            BuildingRTree(running, state);
+            break;
+        case State::FileReading:
+            FileReading(running, state);
+            break;
+        case State::Testing:
+            Evaluation(running, state);
+            break;
+        default:
+            break;
         }
-
-        // Fullscreen host window
-        const ImGuiViewport *vp = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(vp->WorkPos);
-        ImGui::SetNextWindowSize(vp->WorkSize);
-
-        if (ImGui::Begin("Main window", nullptr,
-                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus))
-        {
-            if (state.m_FileLoadingState.loading)
-            {
-                if (state.m_FileLoadingState.fileRead)
-                {
-                    ImGui::Text("Inserting objects into RTree... %zu / %zu", state.m_FileLoadingState.objectsInserted, state.m_Objects.size());
-                    ImGui::ProgressBar(state.m_Objects.size() > 0 ? (float)state.m_FileLoadingState.objectsInserted / state.m_Objects.size() : 0.0f, ImVec2(-1, 0));
-                    if (!state.m_FileLoadingState.errorMessage.empty())
-                        ImGui::Text("Error: %s", state.m_FileLoadingState.errorMessage.c_str());
-                }
-                else
-                {
-                    ImGui::Text("Loading file... %zu / %zu lines read", state.m_FileLoadingState.linesRead, state.m_FileLoadingState.totalLines);
-                    ImGui::ProgressBar(state.m_FileLoadingState.totalLines > 0 ? (float)state.m_FileLoadingState.linesRead / state.m_FileLoadingState.totalLines : 0.0f, ImVec2(-1, 0));
-                    if (!state.m_FileLoadingState.errorMessage.empty())
-                        ImGui::Text("Error: %s", state.m_FileLoadingState.errorMessage.c_str());
-                }
-            }
-            else
-            {
-                viewport.Show();
-            }
-        }
-        ImGui::End();
-
-        if (imguiDemoOpen)
-            ImGui::ShowDemoWindow(&imguiDemoOpen);
-
         ImGui::Render();
 
         SDL_SetRenderDrawColor(renderer, 12, 12, 12, 255);
@@ -191,58 +165,200 @@ ImFont *loadFont()
     return io.Fonts->AddFontFromMemoryTTF((void *)font_data, static_cast<int>(font_data_len), 0.0f, &fontConfig);
 }
 
-void ReadCsvFile(const std::string &filePath);
+void MainMenu(bool &running, AppState &state)
+{
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Load npy file"))
+                LoadNpyFile();
+            if (ImGui::MenuItem("Exit"))
+                running = false;
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Window"))
+        {
+            ImGui::MenuItem("ImGui Demo", nullptr, &state.m_ShowImGuiDemo);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
 
-void LoadCsvFile()
+    // Fullscreen host window
+    const ImGuiViewport *vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+
+    ImGui::Begin("Main window", nullptr,
+                 ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+    ImGui::Text("Main menu");
+    ImGui::Separator();
+
+    if (ImGui::Button("Load NPY file"))
+    {
+        LoadNpyFile();
+    }
+
+    ImGui::BeginDisabled(
+        !state.m_RTree ||
+        state.m_RTree->GetN() != 2 ||
+        state.m_Objects.size() == 0 ||
+        state.m_Objects.size() > 5000);
+    if (ImGui::Button("Demo"))
+        state.SetCurrentState(State::Demo);
+    ImGui::EndDisabled();
+
+    if (state.m_RTree)
+    {
+
+        if (ImGui::Button("Free tree"))
+        {
+            state.m_RTree.reset();
+            state.RecalculateMemorySize();
+        }
+
+        if (ImGui::Button("Clear objects"))
+        {
+            state.m_Objects.clear();
+            state.RecalculateMemorySize();
+        }
+        ImGui::Text("Loaded RTree with %zu objects, memory size: %.2f MB (%.2f MB)", state.GetObjectsCount(), state.GetRTreeMemorySize() / (1024.0f * 1024.0f), state.m_ObjSize / (1024.0f * 1024.0f));
+    }
+    ImGui::End();
+}
+
+void FileReading(bool &running, AppState &state)
+{
+    // Fullscreen host window
+    const ImGuiViewport *vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+
+    ImGui::Begin("Main window", nullptr,
+                 ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+    ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime(), ImVec2(0.0f, 0.0f), "Загрузка файла...");
+    ImGui::End();
+}
+
+void BuildingRTree(bool &running, AppState &state)
+{
+    // Fullscreen host window
+    const ImGuiViewport *vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+
+    ImGui::Begin("Main window", nullptr,
+                 ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+    ImGui::ProgressBar(
+        state.m_BuildingRTreeState.GetProgress(),
+        ImVec2(0.0f, 0.0f),
+        std::format("Построение дерева {:.2f}%", state.m_BuildingRTreeState.GetProgress() * 100.0).c_str());
+    ImGui::SameLine();
+    ImGui::Text("%zu / %zu", state.m_BuildingRTreeState.handledObjects, state.m_BuildingRTreeState.totalObjects);
+    ImGui::End();
+}
+
+void Demo(bool &running, AppState &state)
+{
+    // Main menu
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Load npy file"))
+                LoadNpyFile();
+            if (ImGui::MenuItem("Exit"))
+                running = false;
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Window"))
+        {
+            ImGui::MenuItem("ImGui Demo", nullptr, &state.m_ShowImGuiDemo);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
+    // Fullscreen host window
+    const ImGuiViewport *vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+
+    if (ImGui::Begin("Main window", nullptr,
+                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus))
+    {
+        Widgets::Viewport();
+    }
+    ImGui::End();
+}
+
+void Evaluation(bool &running, AppState &state)
+{
+    ImGui::Text("Evaluation");
+    ImGui::Separator();
+    if (ImGui::Button("Back to Main Menu"))
+    {
+        state.SetCurrentState(State::MainMenu);
+    }
+}
+
+void LoadNpyFileThreadTarget(const std::string &filePath);
+void LoadNpyFile()
 {
     AppState &state = AppState::instance();
-    const char *selectedPath = tinyfd_openFileDialog("Select CSV file", "", 0, nullptr, nullptr, 0);
+    const char *selectedPath = tinyfd_openFileDialog("Select NPY file", "", 0, nullptr, nullptr, 0);
     if (!selectedPath || selectedPath[0] == '\0')
         return;
 
-    state.m_FileLoadingState.SetStartReading();
-    state.m_Objects.clear();
+    state.SetStartFileReading();
     const std::string filePath(selectedPath);
-    std::thread fileLoadingThread(ReadCsvFile, filePath);
+    std::thread fileLoadingThread(LoadNpyFileThreadTarget, filePath);
     fileLoadingThread.detach();
 }
 
-void ReadCsvFile(const std::string &filePath)
+void LoadNpyFileThreadTarget(const std::string &filePath)
 {
     AppState &state = AppState::instance();
-    try
+    npy::npy_data data = npy::read_npy<float>(filePath);
+
+    std::print("Shape: ");
+    for (size_t i = 0; i < data.shape.size(); ++i)
     {
-        std::ifstream fileStream(filePath);
-        if (!fileStream.is_open())
-            throw std::runtime_error("Failed to open file: " + filePath);
-
-        std::size_t lineCount = Filetools::CountLines(fileStream);
-        state.m_FileLoadingState.totalLines = lineCount;
-        state.m_Objects.reserve(lineCount);
-
-        Filetools::ReadObjectsFromCsvFile<float>(fileStream, state.m_FileLoadingState.linesRead, [&state](rtree::Object<float> &obj)
-                                                 { state.m_Objects.push_back(obj); });
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        state.m_FileLoadingState.fileRead = true;
-
-        if (state.m_Objects.empty())
-        {
-            state.m_FileLoadingState.loading = false;
-            return;
-        }
-
-        state.m_RTree = rtree::RTree<float>(4, 2, state.m_Objects.front().mbr.n);
-        for (const auto &obj : state.m_Objects)
-        {
-            state.m_FileLoadingState.objectsInserted++;
-            state.m_RTree.Insert(obj);
-        }
-        state.RecalculateMemorySize();
-        state.m_FileLoadingState.loading = false;
+        std::print("{}", data.shape[i]);
+        if (i < data.shape.size() - 1)
+            std::print("x");
     }
-    catch (const std::exception &e)
+
+    if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
     {
-        state.m_FileLoadingState.errorMessage = e.what();
+        // TODO: handle error
+        return;
     }
+
+    state.m_BuildingRTreeState.totalObjects = data.shape[0];
+    state.SetCurrentState(State::BuildingRTree);
+    state.m_RTree = std::make_unique<rtree::RTree<float>>(4, 2, data.shape[1] / 2);
+
+    state.m_Objects.clear();
+    state.m_Objects.reserve(data.shape[0]);
+
+    for (size_t i = 0; i < data.shape[0]; ++i)
+    {
+        uint64_t id = static_cast<uint64_t>(i);
+        rtree::Rectangle<float> rect(data.shape[1] / 2);
+        for (size_t j = 0; j < data.shape[1]; ++j)
+            rect.size[j] = data.data[i * data.shape[1] + j];
+        rtree::Object<float> obj(id, rect);
+        state.m_Objects.push_back(obj);
+        state.m_RTree->Insert(obj);
+        state.m_BuildingRTreeState.handledObjects++;
+    }
+
+    state.RecalculateMemorySize();
+
+    state.SetCurrentState(State::MainMenu);
 }

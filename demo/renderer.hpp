@@ -1,8 +1,15 @@
 #pragma once
 #include <string>
 #include <cmath>
-#include "state.hpp"
+
 #include "imgui.h"
+
+struct Scene
+{
+    const std::vector<rtree::Object<float>> &objects;
+    const rtree::RTree<float> &rtree;
+    const ImVec2 mouseWorldPos;
+};
 
 struct Camera2D
 {
@@ -32,13 +39,12 @@ struct Camera2D
 class Renderer
 {
 public:
-    virtual void Render(ImDrawList *dl, const ImVec2 &viewportMin, const ImVec2 &viewportMax, const Camera2D &camera) = 0;
+    virtual void Render(ImDrawList *dl, const ImVec2 &viewportMin, const ImVec2 &viewportMax, const Camera2D &camera, const Scene &scene) = 0;
     virtual ~Renderer() = default;
 };
 
 class DefaultRenderer : public Renderer
 {
-    AppState &m_AppState = AppState::instance();
 
     static inline void AddDashedLine(ImDrawList *dl, ImVec2 a, ImVec2 b, ImU32 col, float thickness, float dashLen, float gapLen)
     {
@@ -78,11 +84,17 @@ class DefaultRenderer : public Renderer
     }
 
 public:
-    void Render(ImDrawList *dl, const ImVec2 &viewportMin, const ImVec2 &viewportMax, const Camera2D &camera) override
+    void Render(
+        ImDrawList *dl,
+        const ImVec2 &viewportMin,
+        const ImVec2 &viewportMax,
+        const Camera2D &camera,
+        const Scene &scene
+    ) override
     {
         if (!dl)
             return;
-        if (m_AppState.m_Objects.empty())
+        if (scene.objects.empty())
         {
             ImGui::PushFont(NULL, 26.0f);
             dl->AddText(
@@ -92,17 +104,17 @@ public:
             ImGui::PopFont();
             return;
         }
-        if (m_AppState.m_RTree.GetN() != 2)
+        if (scene.rtree.GetN() != 2)
         {
             ImGui::PushFont(NULL, 26.0f);
             dl->AddText(
                 ImVec2(viewportMin.x + 10.0f, viewportMin.y + 10.0f),
                 ImGui::GetColorU32(ImGuiCol_Text),
-                ("Размерность объектов(" + std::to_string(m_AppState.m_RTree.GetN()) + ") не равна 2, отображение не поддерживается").c_str());
+                ("Размерность объектов(" + std::to_string(scene.rtree.GetN()) + ") не равна 2, отображение не поддерживается").c_str());
             ImGui::PopFont();
             return;
         }
-        if (m_AppState.m_Objects.size() > 1000)
+        if (scene.objects.size() > 1000)
         {
             ImGui::PushFont(NULL, 26.0f);
             dl->AddText(
@@ -114,7 +126,7 @@ public:
         }
 
         ImGui::PushFont(NULL, 12.0f * camera.zoom / ImGui::GetIO().FontGlobalScale);
-        for (const auto &obj : m_AppState.m_Objects)
+        for (const auto &obj : scene.objects)
         {
             auto x = obj.mbr.size[0];
             auto y = obj.mbr.size[1];
@@ -128,8 +140,8 @@ public:
         }
 
         // Tree
-        m_AppState.m_RTree.Dfs([&](const auto *node)
-                               {
+        scene.rtree.Dfs([&](const auto *node)
+                  {
             if (!node)
                 return;
             const float offset = 0.0f;
@@ -146,7 +158,7 @@ public:
 
         // Mouse position
         {
-            const ImVec2 mouseWorldPos = m_AppState.m_MouseWorldPos;
+            const ImVec2 mouseWorldPos = scene.mouseWorldPos;
             const ImVec2 p0 = camera.WorldToScreen(ImVec2(mouseWorldPos.x - 5.0f, mouseWorldPos.y - 5.0f), viewportMin, viewportMax);
             const ImVec2 p1 = camera.WorldToScreen(ImVec2(mouseWorldPos.x + 5.0f, mouseWorldPos.y + 5.0f), viewportMin, viewportMax);
             dl->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), ImGui::GetColorU32(ImGuiCol_Text), 2.0f * camera.zoom);

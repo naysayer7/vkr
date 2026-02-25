@@ -146,6 +146,8 @@ namespace rtree
 
         Object(uint64_t id, const Rectangle<T> &mbr) : id(id), mbr(mbr) {}
 
+        Object(uint64_t id, Rectangle<T> &&mbr) : id(id), mbr(std::move(mbr)) {}
+
         std::size_t MemorySize() const
         {
             return sizeof(*this) + mbr.BufferMemorySize();
@@ -422,7 +424,7 @@ namespace rtree
 
                 for (std::size_t i = 1; i < entries.size(); ++i)
                 {
-                    const RectangleType r = getRect(entries[i]);
+                    const auto &r = getRect(entries[i]);
                     const T s = r.size[dim];
                     const T e = r.End(dim);
                     if (s < minStart)
@@ -466,7 +468,7 @@ namespace rtree
             std::vector<ObjectType> entries;
             entries.swap(node->objects);
 
-            auto rectOf = [](const ObjectType &o) -> RectangleType
+            auto rectOf = [](const ObjectType &o) -> const RectangleType &
             { return o.mbr; };
             const SeedPair seeds = PickSeedsLinear(entries, rectOf);
 
@@ -524,7 +526,7 @@ namespace rtree
                 if (pick >= entries.size())
                     break;
 
-                const RectangleType r = entries[pick].mbr;
+                const RectangleType &r = entries[pick].mbr;
                 const T eA = Enlargement(mbrA, r);
                 const T eB = Enlargement(mbrB, r);
                 const T vA = mbrA.Volume();
@@ -572,7 +574,7 @@ namespace rtree
             std::vector<NodeType *> entries;
             entries.swap(node->children);
 
-            auto rectOf = [](const NodeType *n) -> RectangleType
+            auto rectOf = [](const NodeType *n) -> const RectangleType &
             { return n->mbr; };
             const SeedPair seeds = PickSeedsLinear(entries, rectOf);
 
@@ -627,7 +629,7 @@ namespace rtree
                 if (pick >= entries.size())
                     break;
 
-                const RectangleType r = entries[pick]->mbr;
+                const RectangleType &r = entries[pick]->mbr;
                 const double eA = Enlargement(mbrA, r);
                 const double eB = Enlargement(mbrB, r);
                 const double vA = mbrA.Volume();
