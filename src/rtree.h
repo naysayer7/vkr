@@ -94,9 +94,9 @@ namespace rtree
             return Rectangle(*this).Unite(other);
         }
 
-        T Volume() const
+        double Volume() const
         {
-            T v = 1.0;
+            double v = 1.0;
             for (std::size_t i = 0; i < n; ++i)
                 v *= (size[i + n] >= 0) ? size[i + n] : 0;
             return v;
@@ -131,7 +131,7 @@ namespace rtree
         {
             return sizeof(*this) + BufferMemorySize();
         }
-        
+
         std::size_t BufferMemorySize() const
         {
             return n * 2 * sizeof(T);
@@ -157,7 +157,7 @@ namespace rtree
     template <typename T>
     struct Node
     {
-        std::vector<Object<T>> objects{};
+        std::vector<const Object<T> *> objects{};
         std::vector<Node<T> *> children{};
         Rectangle<T> mbr;
 
@@ -184,7 +184,7 @@ namespace rtree
                 return size;
 
             if (!objects.empty())
-                size += objects.size() * objects.front().MemorySize();
+                size += objects.size() * sizeof(objects.front());
             if (!children.empty())
                 size += children.size() * sizeof(children.front());
 
@@ -212,7 +212,7 @@ namespace rtree
         RTree(RTree &&) noexcept = default;
         RTree &operator=(RTree &&) noexcept = default;
 
-        void Insert(const ObjectType &obj)
+        void Insert(const ObjectType *obj)
         {
             NodeType *split = InsertRecursive(root.get(), obj);
             if (split)
@@ -283,7 +283,7 @@ namespace rtree
         std::size_t n;
         std::unique_ptr<Node<T>> root;
 
-        static T Enlargement(const RectangleType &current, const RectangleType &added)
+        static double Enlargement(const RectangleType &current, const RectangleType &added)
         {
             const RectangleType u = current.Union(added);
             return u.Volume() - current.Volume();
@@ -320,12 +320,12 @@ namespace rtree
             {
                 if (first)
                 {
-                    node->mbr = obj.mbr;
+                    node->mbr = obj->mbr;
                     first = false;
                 }
                 else
                 {
-                    node->mbr.Unite(obj.mbr);
+                    node->mbr.Unite(obj->mbr);
                 }
             }
         }
@@ -338,15 +338,18 @@ namespace rtree
         NodeType *ChooseSubtree(NodeType *node, const RectangleType &rect) const
         {
             NodeType *best = nullptr;
-            T bestEnlargement = std::numeric_limits<T>::infinity();
-            T bestVolume = std::numeric_limits<T>::infinity();
+            double bestEnlargement = std::numeric_limits<double>::infinity();
+            double bestVolume = std::numeric_limits<double>::infinity();
 
             for (NodeType *child : node->children)
             {
-                const T enlargement = !child->IsEmpty() ? Enlargement(child->mbr, rect) : 0.0f;
-                const T volume = !child->IsEmpty() ? child->mbr.Volume() : 0.0f;
+                const double enlargement = !child->IsEmpty() ? Enlargement(child->mbr, rect) : 0.0f;
+                const double volume = !child->IsEmpty() ? child->mbr.Volume() : 0.0;
 
-                if (enlargement < bestEnlargement || (abs(enlargement - bestEnlargement) < std::numeric_limits<T>::epsilon() && volume < bestVolume))
+                if (
+                    enlargement < bestEnlargement ||
+                    (abs(enlargement - bestEnlargement) < std::numeric_limits<double>::epsilon() &&
+                     volume < bestVolume))
                 {
                     bestEnlargement = enlargement;
                     bestVolume = volume;
@@ -363,7 +366,7 @@ namespace rtree
          * @param obj Объект для вставки.
          * @return Указатель на новый узел на том же уровне дерева, если произошло разбиение, иначе nullptr.
          */
-        NodeType *InsertRecursive(NodeType *node, const ObjectType &obj)
+        NodeType *InsertRecursive(NodeType *node, const ObjectType *obj)
         {
             if (node->IsLeaf())
             {
@@ -377,7 +380,7 @@ namespace rtree
                 return SplitLeaf(node);
             }
 
-            NodeType *child = ChooseSubtree(node, obj.mbr);
+            NodeType *child = ChooseSubtree(node, obj->mbr);
             if (!child)
             {
                 node->objects.push_back(obj);
@@ -465,15 +468,15 @@ namespace rtree
         {
             NodeType *sibling = new NodeType(n);
 
-            std::vector<ObjectType> entries;
+            std::vector<const ObjectType *> entries;
             entries.swap(node->objects);
 
-            auto rectOf = [](const ObjectType &o) -> const RectangleType &
-            { return o.mbr; };
+            auto rectOf = [](const ObjectType *o) -> const RectangleType &
+            { return o->mbr; };
             const SeedPair seeds = PickSeedsLinear(entries, rectOf);
 
-            std::vector<ObjectType> groupA;
-            std::vector<ObjectType> groupB;
+            std::vector<const ObjectType *> groupA;
+            std::vector<const ObjectType *> groupB;
             groupA.reserve(entries.size());
             groupB.reserve(entries.size());
             groupA.push_back(entries[seeds.first]);
@@ -484,8 +487,8 @@ namespace rtree
             used[seeds.first] = true;
             used[seeds.second] = true;
 
-            RectangleType mbrA = groupA[0].mbr;
-            RectangleType mbrB = groupB[0].mbr;
+            RectangleType mbrA = groupA[0]->mbr;
+            RectangleType mbrB = groupB[0]->mbr;
 
             const size_t minFill = minObjectsPerNode;
 
@@ -501,7 +504,7 @@ namespace rtree
                         used[i] = true;
                         --remaining;
                         groupA.push_back(entries[i]);
-                        mbrA.Unite(entries[i].mbr);
+                        mbrA.Unite(entries[i]->mbr);
                     }
                     break;
                 }
@@ -514,7 +517,7 @@ namespace rtree
                         used[i] = true;
                         --remaining;
                         groupB.push_back(entries[i]);
-                        mbrB.Unite(entries[i].mbr);
+                        mbrB.Unite(entries[i]->mbr);
                     }
                     break;
                 }
@@ -526,7 +529,7 @@ namespace rtree
                 if (pick >= entries.size())
                     break;
 
-                const RectangleType &r = entries[pick].mbr;
+                const RectangleType &r = entries[pick]->mbr;
                 const T eA = Enlargement(mbrA, r);
                 const T eB = Enlargement(mbrB, r);
                 const T vA = mbrA.Volume();
