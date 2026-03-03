@@ -6,18 +6,39 @@
 #include <SDL3/SDL_main.h>
 #include <tinyfiledialogs.h>
 #include <npy.hpp>
+#include <algorithm>
+#include <ranges>
+#include <execution>
 
 #include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
 
 #include "widgets.hpp"
-#include "filetools.hpp"
+
+class IndexIterator
+{
+public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = int64_t;
+    using difference_type = int64_t;
+    using pointer = int64_t*;
+    using reference = int64_t&;
+
+    IndexIterator() = default;
+    IndexIterator(value_type index) : index_(index) {}
+    const value_type& operator*() const { return index_; }
+    const void operator++() { ++index_; }
+    bool operator!=(const IndexIterator& lhs) const { return index_ != lhs.index_; }
+    const value_type operator+(const IndexIterator& lhs) const { return index_ + lhs.index_; }
+    value_type operator-(const IndexIterator& lhs) const { return index_ - lhs.index_; }
+private:
+    value_type index_;
+};
 
 extern unsigned char font_data[];
 extern unsigned int font_data_len;
 ImFont *loadFont();
-void LoadCsvFile();
 void MainMenu(bool &running, AppState &state);
 void Demo(bool &running, AppState &state);
 void BuildingRTree(bool &running, AppState &state);
@@ -216,11 +237,6 @@ void MainMenu(bool &running, AppState &state)
         if (ImGui::Button("Free tree"))
         {
             state.m_RTree.reset();
-            state.RecalculateMemorySize();
-        }
-
-        if (ImGui::Button("Clear objects"))
-        {
             state.m_Objects.clear();
             state.RecalculateMemorySize();
         }
@@ -339,25 +355,37 @@ void LoadNpyFileThreadTarget(const std::string &filePath)
         return;
     }
 
-    state.m_BuildingRTreeState.totalObjects = data.shape[0];
-    state.SetCurrentState(State::BuildingRTree);
-    state.m_RTree = std::make_unique<rtree::RTree<float>>(4, 2, data.shape[1] / 2);
-
     state.m_Objects.clear();
     state.m_Objects.reserve(data.shape[0]);
 
-    for (size_t i = 0; i < data.shape[0]; ++i)
-    {
-        uint64_t id = static_cast<uint64_t>(i);
-        rtree::Rectangle<float> rect(data.shape[1] / 2);
-        for (size_t j = 0; j < data.shape[1]; ++j)
-            rect.size[j] = data.data[i * data.shape[1] + j];
-        rtree::Object<float> obj(id, rect);
-        state.m_Objects.push_back(obj);
-        state.m_RTree->Insert(obj);
+    std::for_each(
+        std::execution::par,
+        IndexIterator(0),
+        IndexIterator(data.shape[0]),
+        [&data, &state](IndexIterator iter)
+        {
+            const std::size_t i = static_cast<std::size_t>(*iter);
+            const uint64_t id = static_cast<uint64_t>(i);
+            rtree::Rectangle<float> rect(data.shape[1] / 2);
+            for (size_t j = 0; j < data.shape[1]; ++j)
+                rect.size[j] = data.data[i * data.shape[1] + j];
+            const rtree::Object<float> obj(id, rect);
+            {
+                // Синхронизация доступа к общему вектору объектов
+                std::lock_guard<std::mutex> lock(state.m_Mutex);
+                state.m_Objects.push_back(std::move(obj));
+            }
+        }
+    );
+
+    state.m_BuildingRTreeState.totalObjects = state.m_Objects.size();
+    state.SetCurrentState(State::BuildingRTree);
+    state.m_RTree = std::make_unique<rtree::RTree<float>>(4, 2, data.shape[1] / 2);
+    for (const auto &obj : state.m_Objects) {
+        state.m_RTree->Insert(&obj);
         state.m_BuildingRTreeState.handledObjects++;
     }
-
+    
     state.RecalculateMemorySize();
 
     state.SetCurrentState(State::MainMenu);

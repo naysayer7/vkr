@@ -48,7 +48,6 @@ struct DemoState
 
 class AppState
 {
-    std::mutex m_mutex;
     State m_currentState{State::MainMenu};
     std::size_t m_MemorySize{0};
     AppState()
@@ -56,6 +55,7 @@ class AppState
     }
 
 public:
+    std::mutex m_Mutex;
     bool m_ShowImGuiDemo = false;
     std::size_t m_ObjSize = 0;
 
@@ -97,13 +97,13 @@ public:
 
     void SetCurrentState(State newState)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_Mutex);
         m_currentState = newState;
     }
 
     State GetCurrentState()
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_Mutex);
         return m_currentState;
     }
 
