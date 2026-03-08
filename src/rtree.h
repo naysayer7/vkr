@@ -337,9 +337,9 @@ namespace rtree
          */
         NodeType *ChooseSubtree(NodeType *node, const RectangleType &rect) const
         {
-            NodeType *best = nullptr;
-            double bestEnlargement = std::numeric_limits<double>::infinity();
-            double bestVolume = std::numeric_limits<double>::infinity();
+            NodeType *best = node->children[0];
+            double bestEnlargement = !best->IsEmpty() ? Enlargement(best->mbr, rect) : 0.0;
+            double bestVolume = !best->IsEmpty() ? best->mbr.Volume() : 0.0;
 
             for (NodeType *child : node->children)
             {
