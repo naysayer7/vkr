@@ -472,10 +472,10 @@ class RTree {
         break;
 
       const RectangleType& r = entries[pick]->mbr;
-      const T eA = Enlargement(mbrA, r);
-      const T eB = Enlargement(mbrB, r);
-      const T vA = mbrA.Volume();
-      const T vB = mbrB.Volume();
+      const double eA = Enlargement(mbrA, r);
+      const double eB = Enlargement(mbrB, r);
+      const double vA = mbrA.Volume();
+      const double vB = mbrB.Volume();
 
       bool toA = false;
       if (eA < eB)
