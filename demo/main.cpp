@@ -1,8 +1,5 @@
 #define SDL_MAIN_HANDLED
 
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
-#include <tinyfiledialogs.h>
 #include <algorithm>
 #include <execution>
 #include <npy.hpp>
@@ -10,9 +7,12 @@
 #include <ranges>
 #include <thread>
 
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_main.h"
+#include "imgui.h"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
-#include "imgui.h"
+#include "tinyfiledialogs.h"
 
 #include "widgets.hpp"
 

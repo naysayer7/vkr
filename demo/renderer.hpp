@@ -1,8 +1,10 @@
 #pragma once
 #include <cmath>
 #include <string>
+#include <vector>
 
 #include "imgui.h"
+#include "rtree.h"
 
 struct Scene {
   const std::vector<rtree::Object<float>>& objects;
