@@ -33,10 +33,13 @@ struct BuildingRTreeState {
 };
 
 struct DemoState {
-  Camera2D m_Camera;
-  DefaultRenderer m_Renderer;
+  Camera2D camera;
+  DefaultRenderer renderer;
+  bool showObjects = true;
+  bool showMBRs = true;
+  bool showNodeIds = false;
 
-  void Reset() { m_Camera = Camera2D(); }
+  void Reset() { camera = Camera2D(); }
 };
 
 class AppState {

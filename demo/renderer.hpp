@@ -40,13 +40,19 @@ struct Camera2D {
   }
 };
 
+struct RenderContext {
+  ImDrawList* dl;
+  ImVec2& viewportMin;
+  ImVec2& viewportMax;
+  Camera2D& camera;
+  bool showObjects;
+  bool showMBRs;
+  bool showNodeIds;
+};
+
 class Renderer {
  public:
-  virtual void Render(ImDrawList* dl,
-                      const ImVec2& viewportMin,
-                      const ImVec2& viewportMax,
-                      const Camera2D& camera,
-                      const Scene& scene) = 0;
+  virtual void Render(const RenderContext& ctx, const Scene& scene) = 0;
   virtual ~Renderer() = default;
 };
 
@@ -97,26 +103,72 @@ class DefaultRenderer : public Renderer {
     AddDashedLine(dl, d, a, col, thickness, dashLen, gapLen);
   }
 
+  void DrawObjectAsPoint(const RenderContext& ctx,
+                         const rtree::Object<float>& obj) {
+    const float size = 3.0f;
+    const auto& x = obj.mbr.size[0];
+    const auto& y = obj.mbr.size[1];
+    const ImVec2 p = ctx.camera.WorldToScreen(ImVec2(x, y), ctx.viewportMin,
+                                              ctx.viewportMax);
+    ctx.dl->AddCircleFilled(p, size * ctx.camera.zoom,
+                            ImGui::GetColorU32(ImGuiCol_PlotHistogram));
+
+    if (ctx.showNodeIds)
+      ctx.dl->AddText(ImVec2(p.x + 2.0f * ctx.camera.zoom, p.y),
+                      ImGui::GetColorU32(ImGuiCol_Text),
+                      std::to_string(obj.id).c_str());
+  }
+
+  void DrawObject(const RenderContext& ctx, const rtree::Object<float>& obj) {
+    const auto& x = obj.mbr.size[0];
+    const auto& y = obj.mbr.size[1];
+    const auto& w = obj.mbr.size[2];
+    const auto& h = obj.mbr.size[3];
+    if (w <= 0.0f || h <= 0.0f) {
+      this->DrawObjectAsPoint(ctx, obj);
+    } else {
+      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2(x, y), ctx.viewportMin,
+                                                 ctx.viewportMax);
+      const ImVec2 p1 = ctx.camera.WorldToScreen(
+          ImVec2(x + w, y + h), ctx.viewportMin, ctx.viewportMax);
+      ctx.dl->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_PlotHistogram), 0.0f,
+                      0, 2.0f * ctx.camera.zoom);
+      if (ctx.showNodeIds)
+        ctx.dl->AddText(ImVec2(p0.x + 2.0f * ctx.camera.zoom, p0.y),
+                        ImGui::GetColorU32(ImGuiCol_Text),
+                        std::to_string(obj.id).c_str());
+    }
+  }
+
+  void MousePosition(const RenderContext& ctx, const ImVec2& mouseWorldPos) {
+    const ImVec2 p0 = ctx.camera.WorldToScreen(
+        ImVec2(mouseWorldPos.x - 5.0f, mouseWorldPos.y - 5.0f), ctx.viewportMin,
+        ctx.viewportMax);
+    const ImVec2 p1 = ctx.camera.WorldToScreen(
+        ImVec2(mouseWorldPos.x + 5.0f, mouseWorldPos.y + 5.0f), ctx.viewportMin,
+        ctx.viewportMax);
+    ctx.dl->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y),
+                    ImGui::GetColorU32(ImGuiCol_Text), 2.0f * ctx.camera.zoom);
+    ctx.dl->AddLine(ImVec2(p0.x, p1.y), ImVec2(p1.x, p0.y),
+                    ImGui::GetColorU32(ImGuiCol_Text), 2.0f * ctx.camera.zoom);
+  }
+
  public:
-  void Render(ImDrawList* dl,
-              const ImVec2& viewportMin,
-              const ImVec2& viewportMax,
-              const Camera2D& camera,
-              const Scene& scene) override {
-    if (!dl)
+  void Render(const RenderContext& ctx, const Scene& scene) override {
+    if (!ctx.dl)
       return;
     if (scene.objects.empty()) {
       ImGui::PushFont(NULL, 26.0f);
-      dl->AddText(ImVec2(viewportMin.x + 10.0f, viewportMin.y + 10.0f),
-                  ImGui::GetColorU32(ImGuiCol_Text),
-                  "Нет объектов для отображения");
+      ctx.dl->AddText(
+          ImVec2(ctx.viewportMin.x + 10.0f, ctx.viewportMin.y + 10.0f),
+          ImGui::GetColorU32(ImGuiCol_Text), "Нет объектов для отображения");
       ImGui::PopFont();
       return;
     }
     if (scene.rtree.GetN() != 2) {
       ImGui::PushFont(NULL, 26.0f);
-      dl->AddText(
-          ImVec2(viewportMin.x + 10.0f, viewportMin.y + 10.0f),
+      ctx.dl->AddText(
+          ImVec2(ctx.viewportMin.x + 10.0f, ctx.viewportMin.y + 10.0f),
           ImGui::GetColorU32(ImGuiCol_Text),
           ("Размерность объектов(" + std::to_string(scene.rtree.GetN()) +
            ") не равна 2, отображение не поддерживается")
@@ -126,66 +178,53 @@ class DefaultRenderer : public Renderer {
     }
     if (scene.objects.size() > 1000) {
       ImGui::PushFont(NULL, 26.0f);
-      dl->AddText(ImVec2(viewportMin.x + 10.0f, viewportMin.y + 10.0f),
-                  ImGui::GetColorU32(ImGuiCol_Text),
-                  "Слишком много объектов для отображения");
+      ctx.dl->AddText(
+          ImVec2(ctx.viewportMin.x + 10.0f, ctx.viewportMin.y + 10.0f),
+          ImGui::GetColorU32(ImGuiCol_Text),
+          "Слишком много объектов для отображения");
       ImGui::PopFont();
       return;
     }
 
-    ImGui::PushFont(NULL, 12.0f * camera.zoom / ImGui::GetIO().FontGlobalScale);
-    for (const auto& obj : scene.objects) {
-      auto x = obj.mbr.size[0];
-      auto y = obj.mbr.size[1];
-      auto w = obj.mbr.size[2];
-      auto h = obj.mbr.size[3];
-
-      const ImVec2 p0 =
-          camera.WorldToScreen(ImVec2(x, y), viewportMin, viewportMax);
-      const ImVec2 p1 =
-          camera.WorldToScreen(ImVec2(x + w, y + h), viewportMin, viewportMax);
-      dl->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_PlotHistogram), 0.0f, 0,
-                  2.0f * camera.zoom);
-      dl->AddText(ImVec2(p0.x + 2.0f * camera.zoom, p0.y),
-                  ImGui::GetColorU32(ImGuiCol_Text),
-                  std::to_string(obj.id).c_str());
+    if (ctx.showObjects) {
+      ImGui::PushFont(NULL,
+                      12.0f * ctx.camera.zoom / ImGui::GetIO().FontGlobalScale);
+      for (const auto& obj : scene.objects) {
+        const auto& x = obj.mbr.size[0];
+        const auto& y = obj.mbr.size[1];
+        const auto& w = obj.mbr.size[2];
+        const auto& h = obj.mbr.size[3];
+        if (w <= 0.0f || h <= 0.0f) {
+          this->DrawObjectAsPoint(ctx, obj);
+        } else {
+          this->DrawObject(ctx, obj);
+        }
+      }
+      ImGui::PopFont();
     }
 
-    // Tree
-    scene.rtree.Dfs([&](const auto* node) {
-      if (!node)
-        return;
-      const float offset = 0.0f;
-      auto x = node->mbr.size[0] - offset;
-      auto y = node->mbr.size[1] - offset;
-      auto w = node->mbr.size[2] + offset * 2;
-      auto h = node->mbr.size[3] + offset * 2;
-      const ImVec2 p0 =
-          camera.WorldToScreen(ImVec2(x, y), viewportMin, viewportMax);
-      const ImVec2 p1 =
-          camera.WorldToScreen(ImVec2(x + w, y + h), viewportMin, viewportMax);
-      const float thickness = 1.0f * camera.zoom;
-      const float dashLen = 6.0f * camera.zoom;
-      const float gapLen = 4.0f * camera.zoom;
-      AddDashedRect(dl, p0, p1, ImGui::GetColorU32(ImGuiCol_PlotLines),
-                    thickness, dashLen, gapLen);
-    });
+    if (ctx.showMBRs) {
+      scene.rtree.Dfs([&](const auto* node) {
+        if (!node)
+          return;
+        const float offset = 0.0f;
+        auto x = node->mbr.size[0] - offset;
+        auto y = node->mbr.size[1] - offset;
+        auto w = node->mbr.size[2] + offset * 2;
+        auto h = node->mbr.size[3] + offset * 2;
+        const ImVec2 p0 = ctx.camera.WorldToScreen(
+            ImVec2(x, y), ctx.viewportMin, ctx.viewportMax);
+        const ImVec2 p1 = ctx.camera.WorldToScreen(
+            ImVec2(x + w, y + h), ctx.viewportMin, ctx.viewportMax);
+        const float thickness = 1.0f * ctx.camera.zoom;
+        const float dashLen = 6.0f * ctx.camera.zoom;
+        const float gapLen = 4.0f * ctx.camera.zoom;
+        AddDashedRect(ctx.dl, p0, p1, ImGui::GetColorU32(ImGuiCol_PlotLines),
+                      thickness, dashLen, gapLen);
+      });
+    }
 
     // Mouse position
-    {
-      const ImVec2 mouseWorldPos = scene.mouseWorldPos;
-      const ImVec2 p0 = camera.WorldToScreen(
-          ImVec2(mouseWorldPos.x - 5.0f, mouseWorldPos.y - 5.0f), viewportMin,
-          viewportMax);
-      const ImVec2 p1 = camera.WorldToScreen(
-          ImVec2(mouseWorldPos.x + 5.0f, mouseWorldPos.y + 5.0f), viewportMin,
-          viewportMax);
-      dl->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y),
-                  ImGui::GetColorU32(ImGuiCol_Text), 2.0f * camera.zoom);
-      dl->AddLine(ImVec2(p0.x, p1.y), ImVec2(p1.x, p0.y),
-                  ImGui::GetColorU32(ImGuiCol_Text), 2.0f * camera.zoom);
-    }
-
-    ImGui::PopFont();
+    this->MousePosition(ctx, scene.mouseWorldPos);
   }
 };

@@ -25,8 +25,8 @@ std::string FormatMemorySize(unsigned int bytes) {
 namespace Widgets {
 void Viewport() {
   AppState& state = AppState::instance();
-  Camera2D& camera = state.m_DemoState.m_Camera;
-  Renderer& renderer = state.m_DemoState.m_Renderer;
+  Camera2D& camera = state.m_DemoState.camera;
+  Renderer& renderer = state.m_DemoState.renderer;
 
   ImGui::BeginChild("Controls", ImVec2(600, 0), true);
   ImGui::Text("Кол-во объектов: %zu", state.GetObjectsCount());
@@ -40,9 +40,15 @@ void Viewport() {
                     .c_str());
   else
     ImGui::Text("Память на объект: 0 B");
+
   ImGui::Separator();
+
   ImGui::SliderFloat("Масштаб", &camera.zoom, Camera2D::MinZoom(),
                      Camera2D::MaxZoom(), "%.3f", ImGuiSliderFlags_Logarithmic);
+  ImGui::Checkbox("Показать объекты", &state.m_DemoState.showObjects);
+  ImGui::Checkbox("Показать MBR", &state.m_DemoState.showMBRs);
+  ImGui::Checkbox("Показать ID узлов", &state.m_DemoState.showNodeIds);
+
   ImGui::EndChild();
 
   ImGui::SameLine();
@@ -53,8 +59,8 @@ void Viewport() {
       "viewport_canvas", requestedSize,
       ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle);
 
-  const ImVec2 viewportMin = ImGui::GetItemRectMin();
-  const ImVec2 viewportMax = ImGui::GetItemRectMax();
+  ImVec2 viewportMin = ImGui::GetItemRectMin();
+  ImVec2 viewportMax = ImGui::GetItemRectMax();
 
   const bool hovered = ImGui::IsItemHovered();
   const bool active = ImGui::IsItemActive();
@@ -85,7 +91,8 @@ void Viewport() {
   dl->AddRectFilled(viewportMin, viewportMax,
                     ImGui::GetColorU32(ImGuiCol_FrameBg));
   renderer.Render(
-      dl, viewportMin, viewportMax, camera,
+      {dl, viewportMin, viewportMax, camera, state.m_DemoState.showObjects,
+       state.m_DemoState.showMBRs, state.m_DemoState.showNodeIds},
       Scene{state.m_Objects, *state.m_RTree, state.m_MouseWorldPos});
   ImGui::PopClipRect();
   ImGui::EndChild();
