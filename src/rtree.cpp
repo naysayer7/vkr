@@ -1,5 +1,3 @@
 #include "rtree.h"
-namespace rtree
-{
 
-}
+namespace rtree {}
