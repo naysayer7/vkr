@@ -9,6 +9,7 @@
 #include "state.hpp"
 #include "utils.hpp"
 
+namespace Widgets {
 std::string FormatMemorySize(unsigned int bytes) {
   const char* suffixes[] = {"B", "KB", "MB", "GB"};
   size_t suffixIndex = 0;
@@ -22,7 +23,6 @@ std::string FormatMemorySize(unsigned int bytes) {
   return std::string(buffer);
 }
 
-namespace Widgets {
 void Viewport() {
   AppState& state = AppState::instance();
   Camera2D& camera = state.m_DemoState.camera;

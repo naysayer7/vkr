@@ -205,8 +205,6 @@ class RTree {
     }
   }
 
-  std::vector<ObjectType> Search(const RectangleType& area) const { return {}; }
-
   void Dfs(std::function<void(const NodeType*)> func) const {
     if (!root)
       return;
@@ -239,6 +237,22 @@ class RTree {
   }
 
   std::size_t GetN() const { return n; }
+
+  std::vector<ObjectType> Search(
+      const RectangleType& area,
+      std::function<void(const NodeType*)> callback) const {
+    std::vector<ObjectType> result;
+    this->SearchRecursive(root.get(), area, result, callback);
+    return result;
+  }
+
+  std::vector<ObjectType> Search(const RectangleType& area) const {
+    return this->Search(area, [](const NodeType*) {});
+  }
+
+  std::vector<ObjectType> kNN(const RectangleType& area, std::size_t k) const {
+    return this->Search(area, [](const NodeType*) {});
+  }
 
   ~RTree() {
     // root and all children are freed automatically.
@@ -604,6 +618,26 @@ class RTree {
     node->mbr = mbrA;
     sibling->mbr = mbrB;
     return sibling;
+  }
+
+  void SearchRecursive(const NodeType* node,
+                       const RectangleType& area,
+                       std::vector<ObjectType>& results,
+                       std::function<void(const NodeType*)> callback) const {
+    if (!node)
+      return;
+    callback(node);
+
+    for (const ObjectType* obj : node->objects) {
+      if (obj->mbr.Intersects(area))
+        results.push_back(*obj);
+    }
+
+    for (const NodeType* child : node->children) {
+      if (child->mbr.Intersects(area)) {
+        SearchRecursive(child, area, results, callback);
+      }
+    }
   }
 };
 }  // namespace rtree

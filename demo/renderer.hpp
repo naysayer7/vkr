@@ -140,7 +140,52 @@ class DefaultRenderer : public Renderer {
     }
   }
 
-  void MousePosition(const RenderContext& ctx, const ImVec2& mouseWorldPos) {
+  void DrawMBRs(const RenderContext& ctx, const rtree::RTree<float>& rtree) {
+    rtree.Dfs([&](const auto* node) {
+      if (!node)
+        return;
+      const float offset = 0.0f;
+      auto x = node->mbr.size[0] - offset;
+      auto y = node->mbr.size[1] - offset;
+      auto w = node->mbr.size[2] + offset * 2;
+      auto h = node->mbr.size[3] + offset * 2;
+      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2(x, y), ctx.viewportMin,
+                                                 ctx.viewportMax);
+      const ImVec2 p1 = ctx.camera.WorldToScreen(
+          ImVec2(x + w, y + h), ctx.viewportMin, ctx.viewportMax);
+      const float thickness = 1.0f * ctx.camera.zoom;
+      const float dashLen = 6.0f * ctx.camera.zoom;
+      const float gapLen = 4.0f * ctx.camera.zoom;
+      AddDashedRect(ctx.dl, p0, p1, ImGui::GetColorU32(ImGuiCol_PlotLines),
+                    thickness, dashLen, gapLen);
+    });
+  }
+
+  void DrawSearch(const RenderContext& ctx, const Scene& scene) const {
+    ImVec4 col = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogramHovered);
+    col.w = 0.25f; // 25% opacity
+    scene.rtree.Search(
+        rtree::Rectangle<float>::FromXYWH(scene.mouseWorldPos.x,
+                                          scene.mouseWorldPos.y, 0.0f, 0.0f),
+        [&](const auto* node) {
+          if (!node)
+            return;
+          const float offset = 0.0f;
+          auto x = node->mbr.size[0] - offset;
+          auto y = node->mbr.size[1] - offset;
+          auto w = node->mbr.size[2] + offset * 2;
+          auto h = node->mbr.size[3] + offset * 2;
+          const ImVec2 p0 = ctx.camera.WorldToScreen(
+              ImVec2(x, y), ctx.viewportMin, ctx.viewportMax);
+          const ImVec2 p1 = ctx.camera.WorldToScreen(
+              ImVec2(x + w, y + h), ctx.viewportMin, ctx.viewportMax);
+          const float thickness = 2.0f * ctx.camera.zoom;
+          ctx.dl->AddRectFilled(p0, p1, ImGui::GetColorU32(col));
+        });
+  }
+
+  void DrawMousePosition(const RenderContext& ctx,
+                         const ImVec2& mouseWorldPos) {
     const ImVec2 p0 = ctx.camera.WorldToScreen(
         ImVec2(mouseWorldPos.x - 5.0f, mouseWorldPos.y - 5.0f), ctx.viewportMin,
         ctx.viewportMax);
@@ -204,27 +249,11 @@ class DefaultRenderer : public Renderer {
     }
 
     if (ctx.showMBRs) {
-      scene.rtree.Dfs([&](const auto* node) {
-        if (!node)
-          return;
-        const float offset = 0.0f;
-        auto x = node->mbr.size[0] - offset;
-        auto y = node->mbr.size[1] - offset;
-        auto w = node->mbr.size[2] + offset * 2;
-        auto h = node->mbr.size[3] + offset * 2;
-        const ImVec2 p0 = ctx.camera.WorldToScreen(
-            ImVec2(x, y), ctx.viewportMin, ctx.viewportMax);
-        const ImVec2 p1 = ctx.camera.WorldToScreen(
-            ImVec2(x + w, y + h), ctx.viewportMin, ctx.viewportMax);
-        const float thickness = 1.0f * ctx.camera.zoom;
-        const float dashLen = 6.0f * ctx.camera.zoom;
-        const float gapLen = 4.0f * ctx.camera.zoom;
-        AddDashedRect(ctx.dl, p0, p1, ImGui::GetColorU32(ImGuiCol_PlotLines),
-                      thickness, dashLen, gapLen);
-      });
+      this->DrawMBRs(ctx, scene.rtree);
+      this->DrawSearch(ctx, scene);
     }
 
     // Mouse position
-    this->MousePosition(ctx, scene.mouseWorldPos);
+    this->DrawMousePosition(ctx, scene.mouseWorldPos);
   }
 };
