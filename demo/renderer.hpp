@@ -47,7 +47,9 @@ struct RenderContext {
   Camera2D& camera;
   bool showObjects;
   bool showMBRs;
+  bool showSearch;
   bool showNodeIds;
+  int kNN;
 };
 
 class Renderer {
@@ -163,7 +165,7 @@ class DefaultRenderer : public Renderer {
 
   void DrawSearch(const RenderContext& ctx, const Scene& scene) const {
     ImVec4 col = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogramHovered);
-    col.w = 0.25f; // 25% opacity
+    col.w = 0.25f;  // 25% opacity
     scene.rtree.Search(
         rtree::Rectangle<float>::FromXYWH(scene.mouseWorldPos.x,
                                           scene.mouseWorldPos.y, 0.0f, 0.0f),
@@ -198,6 +200,25 @@ class DefaultRenderer : public Renderer {
                     ImGui::GetColorU32(ImGuiCol_Text), 2.0f * ctx.camera.zoom);
   }
 
+  void DrawKNN(const RenderContext& ctx, const Scene& scene) {
+    ImVec4 col = ImGui::GetStyleColorVec4(ImGuiCol_PlotLinesHovered);
+    col.w = 0.25f;  // 25% opacity
+    rtree::Rectangle<float> queryRect = rtree::Rectangle<float>::FromXYWH(
+        scene.mouseWorldPos.x, scene.mouseWorldPos.y, 0.0f, 0.0f);
+    auto results = scene.rtree.kNN(queryRect, ctx.kNN);
+    for (const auto& res : results) {
+      const float offset = 0.0f;
+      auto x = res->mbr.size[0];
+      auto y = res->mbr.size[1];
+      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2(x, y), ctx.viewportMin,
+                                                 ctx.viewportMax);
+      const ImVec2 p1 = ctx.camera.WorldToScreen(
+          scene.mouseWorldPos, ctx.viewportMin, ctx.viewportMax);
+      const float thickness = 2.0f * ctx.camera.zoom;
+      ctx.dl->AddLine(p0, p1, ImGui::GetColorU32(col), thickness);
+    }
+  }
+
  public:
   void Render(const RenderContext& ctx, const Scene& scene) override {
     if (!ctx.dl)
@@ -221,7 +242,7 @@ class DefaultRenderer : public Renderer {
       ImGui::PopFont();
       return;
     }
-    if (scene.objects.size() > 1000) {
+    if (scene.objects.size() > 15000) {
       ImGui::PushFont(NULL, 26.0f);
       ctx.dl->AddText(
           ImVec2(ctx.viewportMin.x + 10.0f, ctx.viewportMin.y + 10.0f),
@@ -250,10 +271,16 @@ class DefaultRenderer : public Renderer {
 
     if (ctx.showMBRs) {
       this->DrawMBRs(ctx, scene.rtree);
-      this->DrawSearch(ctx, scene);
+      if (ctx.showSearch) {
+        this->DrawSearch(ctx, scene);
+      }
     }
 
     // Mouse position
     this->DrawMousePosition(ctx, scene.mouseWorldPos);
+
+    if (ctx.kNN > 0) {
+      this->DrawKNN(ctx, scene);
+    }
   }
 };

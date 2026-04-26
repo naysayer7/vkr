@@ -218,7 +218,7 @@ void MainMenu(bool& running, AppState& state) {
 
   ImGui::BeginDisabled(!state.m_RTree || state.m_RTree->GetN() != 2 ||
                        state.m_Objects.size() == 0 ||
-                       state.m_Objects.size() > 5000);
+                       state.m_Objects.size() > 15000);
   if (ImGui::Button("Demo"))
     state.SetCurrentState(State::Demo);
   ImGui::EndDisabled();

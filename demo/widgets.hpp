@@ -47,7 +47,12 @@ void Viewport() {
                      Camera2D::MaxZoom(), "%.3f", ImGuiSliderFlags_Logarithmic);
   ImGui::Checkbox("Показать объекты", &state.m_DemoState.showObjects);
   ImGui::Checkbox("Показать MBR", &state.m_DemoState.showMBRs);
+  ImGui::BeginDisabled(!state.m_DemoState.showMBRs);
+  ImGui::Checkbox("Показать поиск", &state.m_DemoState.showSearch);
+  ImGui::EndDisabled();
   ImGui::Checkbox("Показать ID узлов", &state.m_DemoState.showNodeIds);
+  ImGui::Separator();
+  ImGui::InputInt("kNN", &state.m_DemoState.kNN);
 
   ImGui::EndChild();
 
@@ -92,7 +97,7 @@ void Viewport() {
                     ImGui::GetColorU32(ImGuiCol_FrameBg));
   renderer.Render(
       {dl, viewportMin, viewportMax, camera, state.m_DemoState.showObjects,
-       state.m_DemoState.showMBRs, state.m_DemoState.showNodeIds},
+       state.m_DemoState.showMBRs, state.m_DemoState.showSearch, state.m_DemoState.showNodeIds, state.m_DemoState.kNN},
       Scene{state.m_Objects, *state.m_RTree, state.m_MouseWorldPos});
   ImGui::PopClipRect();
   ImGui::EndChild();

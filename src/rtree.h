@@ -4,6 +4,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <queue>
 #include <stack>
 #include <stdexcept>
 #include <vector>
@@ -84,8 +85,9 @@ struct Rectangle {
 
   double Volume() const {
     double v = 1.0;
-    for (std::size_t i = 0; i < n; ++i)
+    for (std::size_t i = 0; i < n; ++i) {
       v *= (size[i + n] >= 0) ? size[i + n] : 0;
+    }
     return v;
   }
 
@@ -250,8 +252,48 @@ class RTree {
     return this->Search(area, [](const NodeType*) {});
   }
 
-  std::vector<ObjectType> kNN(const RectangleType& area, std::size_t k) const {
-    return this->Search(area, [](const NodeType*) {});
+  // https://scispace.com/pdf/distance-browsing-in-spatial-databases-49rzehxl7r.pdf page 278
+  std::vector<const ObjectType *> kNN(const RectangleType& area, std::size_t k) const {
+    enum class QueueEntryType { Node, Object };
+
+    struct QueueEntry {
+      double dist;
+      const void* objectOrNode;  // Указатель на NodeType или ObjectType, в
+                                 // зависимости от type.
+      QueueEntryType type;
+
+      bool operator<(const QueueEntry& other) const {
+        return dist > other.dist;  // Меньше - выше приоритет
+      }
+    };
+
+    std::vector<const ObjectType*> result;
+    result.reserve(k);
+    std::priority_queue<QueueEntry> pq;
+    pq.push({0.0, this->root.get(), QueueEntryType::Node});
+    while (!pq.empty() && result.size() < k) {
+      auto [dist, objPtr, type] = pq.top();
+      pq.pop();
+      if (type == QueueEntryType::Object) {
+        // Report object
+        result.push_back(reinterpret_cast<const ObjectType*>(objPtr));
+      } else {
+        const NodeType* node = reinterpret_cast<const NodeType*>(objPtr);
+        if (node->IsLeaf()) {
+          for (const ObjectType* obj : node->objects) {
+            double d = obj->mbr.MinDistance(area);
+            pq.push({d, obj, QueueEntryType::Object});
+          }
+        } else {
+          for (const NodeType* child : node->children) {
+            double d = child->mbr.MinDistance(area);
+            pq.push({d, child, QueueEntryType::Node});
+          }
+        }
+      }
+    }
+
+    return result;
   }
 
   ~RTree() {

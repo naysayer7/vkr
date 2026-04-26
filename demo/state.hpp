@@ -37,7 +37,9 @@ struct DemoState {
   DefaultRenderer renderer;
   bool showObjects = true;
   bool showMBRs = true;
+  bool showSearch = true;
   bool showNodeIds = false;
+  int kNN = 5;
 
   void Reset() { camera = Camera2D(); }
 };
