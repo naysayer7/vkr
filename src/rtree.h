@@ -257,7 +257,7 @@ class RTree {
     enum class QueueEntryType { Node, Object };
 
     struct QueueEntry {
-      double dist;
+      T dist;
       const void* objectOrNode;  // Указатель на NodeType или ObjectType, в
                                  // зависимости от type.
       QueueEntryType type;
@@ -281,12 +281,12 @@ class RTree {
         const NodeType* node = reinterpret_cast<const NodeType*>(objPtr);
         if (node->IsLeaf()) {
           for (const ObjectType* obj : node->objects) {
-            double d = obj->mbr.MinDistance(area);
+            T d = obj->mbr.MinDistance(area);
             pq.push({d, obj, QueueEntryType::Object});
           }
         } else {
           for (const NodeType* child : node->children) {
-            double d = child->mbr.MinDistance(area);
+            T d = child->mbr.MinDistance(area);
             pq.push({d, child, QueueEntryType::Node});
           }
         }
