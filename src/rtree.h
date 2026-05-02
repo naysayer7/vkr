@@ -240,15 +240,15 @@ class RTree {
 
   std::size_t GetN() const { return n; }
 
-  std::vector<ObjectType> Search(
+  std::vector<const ObjectType *> Search(
       const RectangleType& area,
       std::function<void(const NodeType*)> callback) const {
-    std::vector<ObjectType> result;
+    std::vector<const ObjectType *> result;
     this->SearchRecursive(root.get(), area, result, callback);
     return result;
   }
 
-  std::vector<ObjectType> Search(const RectangleType& area) const {
+  std::vector<const ObjectType *> Search(const RectangleType& area) const {
     return this->Search(area, [](const NodeType*) {});
   }
 
@@ -664,7 +664,7 @@ class RTree {
 
   void SearchRecursive(const NodeType* node,
                        const RectangleType& area,
-                       std::vector<ObjectType>& results,
+                       std::vector<const ObjectType *>& results,
                        std::function<void(const NodeType*)> callback) const {
     if (!node)
       return;
@@ -672,7 +672,7 @@ class RTree {
 
     for (const ObjectType* obj : node->objects) {
       if (obj->mbr.Intersects(area))
-        results.push_back(*obj);
+        results.push_back(obj);
     }
 
     for (const NodeType* child : node->children) {
