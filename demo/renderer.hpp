@@ -258,15 +258,15 @@ class DefaultRenderer : public Renderer {
       auto br = ctx.camera.ScreenToWorld(ImVec2{ctx.viewportMax.x, ctx.viewportMax.y}, ctx);
       auto objectsToDraw =
           scene.rtree.Search(rtree::Rectangle<float>::FromXYWH(tl.x, tl.y, br.x - tl.x, br.y - tl.y));
-      for (const auto& obj : objectsToDraw) {
-        const auto& x = obj.mbr.size[0];
-        const auto& y = obj.mbr.size[1];
-        const auto& w = obj.mbr.size[2];
-        const auto& h = obj.mbr.size[3];
+      for (auto obj : objectsToDraw) {
+        const auto& x = obj->mbr.size[0];
+        const auto& y = obj->mbr.size[1];
+        const auto& w = obj->mbr.size[2];
+        const auto& h = obj->mbr.size[3];
         if (w <= 0.0f || h <= 0.0f) {
-          this->DrawObjectAsPoint(ctx, obj);
+          this->DrawObjectAsPoint(ctx, *obj);
         } else {
-          this->DrawObject(ctx, obj);
+          this->DrawObject(ctx, *obj);
         }
       }
       ImGui::PopFont();
