@@ -36,7 +36,7 @@ class IndexIterator {
   value_type index_;
 };
 
-void LoadNpyFileThreadTarget(AppState& state, const std::string& filePath);
+void LoadNpyFileThreadTarget(AppState& state, std::string filePath);
 void LoadNpyFile() {
   AppState& state = AppState::instance();
   const char* selectedPath =
@@ -46,12 +46,11 @@ void LoadNpyFile() {
 
   state.SetStartFileReading();
   const std::string filePath(selectedPath);
-  std::thread fileLoadingThread(LoadNpyFileThreadTarget, std::ref(state),
-                                std::cref(filePath));
+  std::thread fileLoadingThread(LoadNpyFileThreadTarget, std::ref(state), filePath);
   fileLoadingThread.detach();
 }
 
-void LoadNpyFileThreadTarget(AppState& state, const std::string& filePath) {
+void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
   npy::npy_data data = npy::read_npy<float>(filePath);
 
   if (data.shape.size() != 2 || data.shape[1] % 2 != 0) {
