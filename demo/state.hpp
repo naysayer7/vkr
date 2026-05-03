@@ -2,8 +2,8 @@
 #include <future>
 #include <mutex>
 #include <random>
-#include <vector>
 #include <thread>
+#include <vector>
 
 #include "measures.hpp"
 #include "renderer.hpp"
@@ -47,32 +47,25 @@ struct DemoState {
   void Reset() { camera = Camera2D(); }
 };
 
+enum class EvaluationPhase { Setup, Progress, Results };
+
 struct EvaluationResult {
   std::vector<Measures::Duration> times;
   Measures::Duration averangeTime{0.0};
   Measures::Duration errorMargin{0.0};
+
+  void Reset() {
+    times.clear();
+    averangeTime = Measures::Duration{0.0};
+    errorMargin = Measures::Duration{0.0};
+  }
 };
 
 struct EvaluationState {
   EvaluationResult knnResult;
   int numRuns = 1000;
   int k = 5;
-  int numThreads = 4;
-
-  std::vector<std::future<void>> futures;
-  bool isRunning() const {
-    for (const auto& future : futures) {
-      if (future.valid() &&
-          future.wait_for(std::chrono::seconds(0)) !=
-              std::future_status::ready)
-        return true;
-    }
-    return false;
-  }
-
-  bool hasResults() const {
-    return !futures.empty() && !isRunning();
-  }
+  EvaluationPhase phase = EvaluationPhase::Setup;
 };
 
 class AppState {

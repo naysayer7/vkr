@@ -1,5 +1,4 @@
 #pragma once
-#include <future>
 #include <chrono>
 #include <stdexcept>
 
@@ -7,20 +6,16 @@
 
 namespace Controllers {
 
-void EvaluationThreadTarget(const EvaluationState& state);
+void EvaluationThreadTarget(EvaluationState& state);
 void Evaluate(EvaluationState& state) {
-  if (state.isRunning())
-    throw std::runtime_error("Evaluation is already running");
-  state.futures.clear();
-  state.futures.reserve(state.numThreads);
-  for (int i = 0; i < state.numThreads; i++) {
-    state.futures.emplace_back(
-        std::async(std::launch::async, EvaluationThreadTarget, std::cref(state)));
-  }
+  std::thread thread(EvaluationThreadTarget, std::ref(state));
+  state.phase = EvaluationPhase::Progress;
+  thread.detach();
 }
 
-void EvaluationThreadTarget(const EvaluationState& state) {
+void EvaluationThreadTarget(EvaluationState& state) {
   std::this_thread::sleep_for(std::chrono::seconds(10));  // Simulate work
+  state.phase = EvaluationPhase::Results;
 }
 
 }  // namespace Controllers
