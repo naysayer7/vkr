@@ -8,6 +8,7 @@
 #include <stack>
 #include <stdexcept>
 #include <vector>
+#include <shared_mutex>
 
 namespace rtree {
 template <typename T = float>
@@ -196,6 +197,7 @@ class RTree {
   RTree& operator=(RTree&&) noexcept = default;
 
   void Insert(const ObjectType* obj) {
+    std::unique_lock lock(insertionMutex);
     NodeType* split = InsertRecursive(root.get(), obj);
     if (split) {
       NodeType* oldRoot = root.release();
@@ -208,6 +210,7 @@ class RTree {
   }
 
   void Dfs(std::function<void(const NodeType*)> func) const {
+    std::shared_lock lock(insertionMutex);
     if (!root)
       return;
     std::vector<const NodeType*> stack;
@@ -226,15 +229,12 @@ class RTree {
 
   std::size_t MemorySize() const {
     std::size_t size = 0;
-    size += sizeof(*this);
-    std::size_t mbrSize = n * 2 * sizeof(T);
-
-    Dfs([&size, &mbrSize](const NodeType* node) {
+    Dfs([&size](const NodeType* node) {
       if (!node)
         return;
       size += node->MemorySize();
     });
-
+    size += sizeof(*this);
     return size;
   }
 
@@ -243,6 +243,7 @@ class RTree {
   std::vector<const ObjectType *> Search(
       const RectangleType& area,
       std::function<void(const NodeType*)> callback) const {
+    std::shared_lock lock(insertionMutex);
     std::vector<const ObjectType *> result;
     this->SearchRecursive(root.get(), area, result, callback);
     return result;
@@ -267,6 +268,8 @@ class RTree {
       }
     };
 
+    std::shared_lock lock(insertionMutex);
+    
     std::vector<const ObjectType*> result;
     result.reserve(k);
     std::priority_queue<QueueEntry> pq;
@@ -305,6 +308,7 @@ class RTree {
   std::size_t minObjectsPerNode;
   std::size_t n;
   std::unique_ptr<Node<T>> root;
+  mutable std::shared_mutex insertionMutex;
 
   static double Enlargement(const RectangleType& current,
                             const RectangleType& added) {

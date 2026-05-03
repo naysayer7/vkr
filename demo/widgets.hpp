@@ -10,19 +10,6 @@
 #include "utils.hpp"
 
 namespace Widgets {
-std::string FormatMemorySize(unsigned int bytes) {
-  const char* suffixes[] = {"B", "KB", "MB", "GB"};
-  size_t suffixIndex = 0;
-  double count = static_cast<double>(bytes);
-  while (count >= 1024.0 && suffixIndex < 3) {
-    count /= 1024.0;
-    ++suffixIndex;
-  }
-  char buffer[64];
-  snprintf(buffer, sizeof(buffer), "%.2f %s", count, suffixes[suffixIndex]);
-  return std::string(buffer);
-}
-
 void Viewport() {
   AppState& state = AppState::instance();
   Camera2D& camera = state.m_DemoState.camera;
@@ -31,10 +18,10 @@ void Viewport() {
   ImGui::BeginChild("Controls", ImVec2(600, 0), true);
   ImGui::Text("Кол-во объектов: %zu", state.GetObjectsCount());
   ImGui::Text("Используемая деревом память: %s",
-              FormatMemorySize(state.GetRTreeMemorySize()).c_str());
+              Utils::FormatMemorySize(state.GetRTreeMemorySize()).c_str());
   if (state.GetObjectsCount() > 0)
     ImGui::Text("Память на объект: %s",
-                FormatMemorySize(static_cast<unsigned int>(
+                Utils::FormatMemorySize(static_cast<unsigned int>(
                                      (double)state.GetRTreeMemorySize() /
                                      state.GetObjectsCount()))
                     .c_str());

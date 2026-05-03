@@ -1,17 +1,20 @@
 #pragma once
+#include <future>
 #include <mutex>
 #include <random>
 #include <vector>
+#include <thread>
 
+#include "measures.hpp"
 #include "renderer.hpp"
 #include "rtree.h"
 
 enum class State {
-  MainMenu,
-  Demo,
-  FileReading,
-  BuildingRTree,
-  Testing,
+  MainMenu,       // Начальное меню
+  Demo,           // Демонстрация работы R-дерева
+  FileReading,    // Чтение NPY файла
+  BuildingRTree,  // Построение R-дерева после чтения файла
+  Evaluation,     // Тестирование производительности и точности
 };
 
 template <typename T>
@@ -44,6 +47,34 @@ struct DemoState {
   void Reset() { camera = Camera2D(); }
 };
 
+struct EvaluationResult {
+  std::vector<Measures::Duration> times;
+  Measures::Duration averangeTime{0.0};
+  Measures::Duration errorMargin{0.0};
+};
+
+struct EvaluationState {
+  EvaluationResult knnResult;
+  int numRuns = 1000;
+  int k = 5;
+  int numThreads = 4;
+
+  std::vector<std::future<void>> futures;
+  bool isRunning() const {
+    for (const auto& future : futures) {
+      if (future.valid() &&
+          future.wait_for(std::chrono::seconds(0)) !=
+              std::future_status::ready)
+        return true;
+    }
+    return false;
+  }
+
+  bool hasResults() const {
+    return !futures.empty() && !isRunning();
+  }
+};
+
 class AppState {
   State m_currentState{State::MainMenu};
   std::size_t m_MemorySize{0};
@@ -59,6 +90,7 @@ class AppState {
   std::vector<rtree::Object<float>> m_Objects;
   BuildingRTreeState<float> m_BuildingRTreeState;
   DemoState m_DemoState;
+  EvaluationState m_EvaluationState;
 
   void RecalculateMemorySize() {
     if (m_RTree)
