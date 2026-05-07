@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "state.hpp"
+#include "../measures.hpp"
 
 namespace Controllers {
 
@@ -14,7 +15,15 @@ void Evaluate(EvaluationState& state) {
 }
 
 void EvaluationThreadTarget(EvaluationState& state) {
-  std::this_thread::sleep_for(std::chrono::seconds(10));  // Simulate work
+  auto result = Measures::RunMeasure([]() -> void {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));  // Simulate work
+  }, 1000, [&state](const size_t& iteration,
+    const Measures::Duration& time,
+    const Measures::Duration& totalTime) -> void {
+      state.run++;
+  });
+
+  state.knnResult.averangeTime = result.averageTime;
   state.phase = EvaluationPhase::Results;
 }
 

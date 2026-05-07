@@ -1,4 +1,5 @@
 #pragma once
+#include <format>
 #include "imgui.h"
 
 #include "../contollers/evaluation.hpp"
@@ -12,6 +13,14 @@ void EvaluationResults(EvaluationState& state);
 
 void Evaluation(bool& running, AppState& state) {
   auto& evaluationState = state.m_EvaluationState;
+
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+  ImGui::SetNextWindowPos(vp->WorkPos);
+  ImGui::SetNextWindowSize(vp->WorkSize);
+
+  ImGui::Begin(
+      "Main window", nullptr,
+      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
   switch (evaluationState.phase) {
     case EvaluationPhase::Setup:
       EvaluationSetup(evaluationState);
@@ -25,30 +34,26 @@ void Evaluation(bool& running, AppState& state) {
     default:
       std::unreachable();
   }
+  ImGui::End();
 }
 
 void EvaluationSetup(EvaluationState& state) {
-  ImGui::Begin("Evaluation setup");
   ImGui::Text("Настройки для тестирования");
   ImGui::InputInt("Количество запросов", &state.numRuns);
   ImGui::InputInt("k для kNN", &state.k);
   if (ImGui::Button("Начать тестирование")) {
     Controllers::Evaluate(state);
   }
-  ImGui::End();
 }
 
 void EvaluationProgress(EvaluationState& state) {
-  ImGui::Begin("Evaluation progress");
-  ImGui::Text("Тестирование в процессе...");
-  ImGui::End();
+    ImGui::ProgressBar((float)state.run / (float)state.numRuns, ImVec2(0.0f, 0.0f),
+                     std::format("Тестирование... {}/{}", state.run, state.numRuns).c_str());
 }
 
 void EvaluationResults(EvaluationState& state) {
-  ImGui::Begin("Evaluation results");
   ImGui::Text("Результаты тестирования:");
-  // Display evaluation results
-  ImGui::End();
+  ImGui::Text(std::format("AVG: {} ms", state.knnResult.averangeTime).c_str());
 }
 
 }  // namespace Views

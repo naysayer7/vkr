@@ -65,7 +65,12 @@ struct EvaluationState {
   EvaluationResult knnResult;
   int numRuns = 1000;
   int k = 5;
+  int run = 0;
   EvaluationPhase phase = EvaluationPhase::Setup;
+
+  void Reset() {
+    run = 0;
+  }
 };
 
 class AppState {
