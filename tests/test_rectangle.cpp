@@ -3,7 +3,6 @@
 #include <vector>
 #include "rtree.h"
 
-
 using T = float;
 using Rectangle = rtree::Rectangle<T>;
 constexpr std::size_t N = 10;
@@ -77,7 +76,7 @@ TEST(RectangleTest, FromXYWH) {
   T x = 1.0f, y = 2.0f, width = 3.0f, height = 4.0f;
   Rectangle rect = Rectangle::FromXYWH(x, y, width, height);
 
-  EXPECT_FLOAT_EQ(rect.n, 2);
+  EXPECT_EQ(rect.n, 2);
   EXPECT_FLOAT_EQ(rect.size[0], x);
   EXPECT_FLOAT_EQ(rect.size[1], y);
   EXPECT_FLOAT_EQ(rect.size[2], width);

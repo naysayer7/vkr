@@ -1,4 +1,7 @@
 #pragma once
+#include <chrono>
+#include <string>
+#include <format>
 
 namespace Utils {
 std::string FormatMemorySize(size_t bytes) {
@@ -12,5 +15,13 @@ std::string FormatMemorySize(size_t bytes) {
   char buffer[64];
   snprintf(buffer, sizeof(buffer), "%.2f %s", count, suffixes[suffixIndex]);
   return std::string(buffer);
+}
+
+std::string FormatDuration(const Measures::Duration& duration) {
+  using namespace std::chrono;
+  auto ms = duration_cast<milliseconds>(duration).count();
+  auto us = duration_cast<microseconds>(duration).count() % 1000;
+  auto ns = duration_cast<nanoseconds>(duration).count() % 1000;
+  return std::format("{} ms {} us {} ns", ms, us, ns);
 }
 }  // namespace Utils

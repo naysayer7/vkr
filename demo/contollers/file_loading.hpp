@@ -46,7 +46,8 @@ void LoadNpyFile() {
 
   state.SetStartFileReading();
   const std::string filePath(selectedPath);
-  std::thread fileLoadingThread(LoadNpyFileThreadTarget, std::ref(state), filePath);
+  std::thread fileLoadingThread(LoadNpyFileThreadTarget, std::ref(state),
+                                filePath);
   fileLoadingThread.detach();
 }
 
@@ -54,7 +55,9 @@ void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
   npy::npy_data data = npy::read_npy<float>(filePath);
 
   if (data.shape.size() != 2 || data.shape[1] % 2 != 0) {
-    // TODO: handle error
+    throw std::runtime_error(
+        "Invalid NPY file format: expected a 2D array with an even number of "
+        "columns (representing rectangles as pairs of coordinates and sizes).");
     return;
   }
 
@@ -76,18 +79,7 @@ void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
                     state.m_Objects.push_back(std::move(obj));
                   }
                 });
-
-  state.m_BuildingRTreeState.totalObjects = state.m_Objects.size();
-  state.SetCurrentState(State::BuildingRTree);
-  state.m_RTree =
-      std::make_unique<rtree::RTree<float>>(4, 2, data.shape[1] / 2);
-  for (const auto& obj : state.m_Objects) {
-    state.m_RTree->Insert(&obj);
-    state.m_BuildingRTreeState.handledObjects++;
-  }
-
-  state.RecalculateMemorySize();
-
+  state.BuildRTree();
   state.SetCurrentState(State::MainMenu);
 }
 }  // namespace Controllers

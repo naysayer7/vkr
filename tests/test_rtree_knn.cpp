@@ -8,13 +8,21 @@ using namespace rtree;
 using RectangleType = Rectangle<float>;
 using ObjectType = Object<float>;
 using RTreeType = RTree<float>;
-constexpr std::size_t N = 100;
 
-TEST(RTreeTest, InsertCount) {
-  const std::size_t numObjects = 100000;
-  RTreeType rtree(4, 2, N);
+TEST(RTreeKNNTest, Simple) {
+  RTreeType rtree(4, 2, 2);
 
-  std::vector<ObjectType> objects;
+  std::vector<RectangleType> rectangles = {
+      RectangleType::FromXYWH(0.0f, 0.0f, 1.0f, 1.0f),
+      RectangleType::FromXYWH(2.0f, 2.0f, 1.0f, 1.0f),
+      RectangleType::FromXYWH(4.0f, 4.0f, 1.0f, 1.0f),
+      RectangleType::FromXYWH(6.0f, 6.0f, 1.0f, 1.0f),
+      RectangleType::FromXYWH(8.0f, 8.0f, 1.0f, 1.0f),
+  };
+
+  std::vector<ObjectType> objects {
+    
+  };
   objects.reserve(numObjects);
   for (size_t i = 0; i < numObjects; ++i) {
     RectangleType rect(N);

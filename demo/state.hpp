@@ -51,12 +51,12 @@ enum class EvaluationPhase { Setup, Progress, Results };
 
 struct EvaluationResult {
   std::vector<Measures::Duration> times;
-  Measures::Duration averangeTime{0.0};
+  Measures::Duration averageTime{0.0};
   Measures::Duration errorMargin{0.0};
 
   void Reset() {
     times.clear();
-    averangeTime = Measures::Duration{0.0};
+    averageTime = Measures::Duration{0.0};
     errorMargin = Measures::Duration{0.0};
   }
 };
@@ -68,9 +68,12 @@ struct EvaluationState {
   int run = 0;
   EvaluationPhase phase = EvaluationPhase::Setup;
 
-  void Reset() {
-    run = 0;
-  }
+  void Reset() { run = 0; }
+};
+
+struct RTreeParameters {
+  int maxEntries = 4;
+  int minEntries = 2;
 };
 
 class AppState {
@@ -80,6 +83,7 @@ class AppState {
 
  public:
   std::mutex m_Mutex;
+  RTreeParameters m_RTreeParams;
   bool m_ShowImGuiDemo = false;
   std::size_t m_ObjSize = 0;
 
@@ -106,20 +110,79 @@ class AppState {
   size_t GetObjectsCount() const { return m_Objects.size(); }
 
   void SetStartFileReading() {
+    std::lock_guard<std::mutex> lock(m_Mutex);
     m_RTree.reset();
-    m_currentState = State::FileReading;
+    SetCurrentStateUnlocked(State::FileReading);
     m_Objects.clear();
     m_BuildingRTreeState.SetStart();
   }
 
   void SetCurrentState(State newState) {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    m_currentState = newState;
+    SetCurrentStateUnlocked(newState);
   }
 
-  State GetCurrentState() {
+  State GetCurrentState() const { return m_currentState; }
+
+  bool IsDemoAvaliable() const {
+    if (!m_RTree)
+      return false;
+    if (m_RTree->GetN() != 2)
+      return false;
+    if (m_Objects.empty())
+      return false;
+    if (m_Objects.size() > 15000)
+      return false;
+    return true;
+  }
+
+ private:
+  void SetCurrentStateUnlocked(State newState) { m_currentState = newState; }
+
+ public:
+  bool IsRTreeBuiltWithCurrentParameters() const {
+    if (!m_RTree)
+      return false;
+    return m_RTree->GetMaxEntries() == m_RTreeParams.maxEntries &&
+           m_RTree->GetMinEntries() == m_RTreeParams.minEntries;
+  }
+
+  void EnsureRTreeBuiltWithCurrentParameters() {
+    if (IsRTreeBuiltWithCurrentParameters())
+      return;
+    BuildRTree();
+  }
+
+  void BuildRTree() {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    return m_currentState;
+    if (m_Objects.empty())
+      throw std::runtime_error("Cannot build RTree: no objects loaded");
+    std::println(
+        "Building RTree with {} objects, parameters: maxEntries={}, "
+        "minEntries={}",
+        m_Objects.size(), m_RTreeParams.maxEntries, m_RTreeParams.minEntries);
+    if (m_RTree) {
+      std::println("RTree already exists, freeing...");
+      m_RTree.reset();
+    }
+
+    std::println("Starting to build RTree...");
+
+    m_BuildingRTreeState.totalObjects = m_Objects.size();
+    m_BuildingRTreeState.handledObjects = 0;
+    State prevState = GetCurrentState();
+    SetCurrentStateUnlocked(State::BuildingRTree);
+    // Build the R-tree
+    m_RTree = std::make_unique<rtree::RTree<float>>(
+        m_RTreeParams.maxEntries, m_RTreeParams.minEntries,
+        m_Objects.empty() ? 2 : m_Objects[0].mbr.n);
+    for (const auto& obj : m_Objects) {
+      m_RTree->Insert(&obj);
+      ++m_BuildingRTreeState.handledObjects;
+    }
+    std::println("RTree built successfully.");
+    RecalculateMemorySize();
+    SetCurrentStateUnlocked(prevState);
   }
 
   static AppState& instance() {

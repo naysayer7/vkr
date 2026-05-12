@@ -196,6 +196,9 @@ class RTree {
   RTree(RTree&&) noexcept = default;
   RTree& operator=(RTree&&) noexcept = default;
 
+  std::size_t GetMaxEntries() const { return maxObjectsPerNode; }
+  std::size_t GetMinEntries() const { return minObjectsPerNode; }
+
   void Insert(const ObjectType* obj) {
     std::unique_lock lock(insertionMutex);
     NodeType* split = InsertRecursive(root.get(), obj);

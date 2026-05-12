@@ -7,13 +7,13 @@ namespace Views {
 
 void MainMenu(bool& running, AppState& state) {
   if (ImGui::BeginMainMenuBar()) {
-    if (ImGui::BeginMenu("File")) {
+    /* if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Load npy file"))
         Controllers::LoadNpyFile();
       if (ImGui::MenuItem("Exit"))
         running = false;
       ImGui::EndMenu();
-    }
+    } */
     if (ImGui::BeginMenu("Window")) {
       ImGui::MenuItem("ImGui Demo", nullptr, &state.m_ShowImGuiDemo);
       ImGui::EndMenu();
@@ -37,9 +37,7 @@ void MainMenu(bool& running, AppState& state) {
     Controllers::LoadNpyFile();
   }
 
-  ImGui::BeginDisabled(!state.m_RTree || state.m_RTree->GetN() != 2 ||
-                       state.m_Objects.size() == 0 ||
-                       state.m_Objects.size() > 15000);
+  ImGui::BeginDisabled(!state.IsDemoAvaliable());
   if (ImGui::Button("Demo"))
     state.SetCurrentState(State::Demo);
   ImGui::EndDisabled();
@@ -58,7 +56,7 @@ void MainMenu(bool& running, AppState& state) {
                 state.GetObjectsCount(),
                 state.GetRTreeMemorySize() / (1024.0f * 1024.0f),
                 state.m_ObjSize / (1024.0f * 1024.0f));
-  }
+  } 
   ImGui::End();
 }
 
