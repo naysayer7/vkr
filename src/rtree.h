@@ -5,10 +5,11 @@
 #include <limits>
 #include <memory>
 #include <queue>
+#include <shared_mutex>
 #include <stack>
 #include <stdexcept>
 #include <vector>
-#include <shared_mutex>
+
 
 namespace rtree {
 template <typename T = float>
@@ -187,6 +188,9 @@ class RTree {
       : maxObjectsPerNode(maxObjectsPerNode),
         minObjectsPerNode(minObjectsPerNode),
         n(n) {
+    if (minObjectsPerNode > maxObjectsPerNode / 2)
+      throw std::invalid_argument(
+          "minObjectsPerNode must be less than maxObjectsPerNode / 2.");
     root = std::make_unique<NodeType>(n);
   }
 
@@ -243,21 +247,23 @@ class RTree {
 
   std::size_t GetN() const { return n; }
 
-  std::vector<const ObjectType *> Search(
+  std::vector<const ObjectType*> Search(
       const RectangleType& area,
       std::function<void(const NodeType*)> callback) const {
     std::shared_lock lock(insertionMutex);
-    std::vector<const ObjectType *> result;
+    std::vector<const ObjectType*> result;
     this->SearchRecursive(root.get(), area, result, callback);
     return result;
   }
 
-  std::vector<const ObjectType *> Search(const RectangleType& area) const {
+  std::vector<const ObjectType*> Search(const RectangleType& area) const {
     return this->Search(area, [](const NodeType*) {});
   }
 
-  // https://scispace.com/pdf/distance-browsing-in-spatial-databases-49rzehxl7r.pdf page 278
-  std::vector<const ObjectType *> kNN(const RectangleType& area, std::size_t k) const {
+  // https://scispace.com/pdf/distance-browsing-in-spatial-databases-49rzehxl7r.pdf
+  // page 278
+  std::vector<const ObjectType*> kNN(const RectangleType& area,
+                                     std::size_t k) const {
     enum class QueueEntryType { Node, Object };
 
     struct QueueEntry {
@@ -272,7 +278,7 @@ class RTree {
     };
 
     std::shared_lock lock(insertionMutex);
-    
+
     std::vector<const ObjectType*> result;
     result.reserve(k);
     std::priority_queue<QueueEntry> pq;
@@ -671,7 +677,7 @@ class RTree {
 
   void SearchRecursive(const NodeType* node,
                        const RectangleType& area,
-                       std::vector<const ObjectType *>& results,
+                       std::vector<const ObjectType*>& results,
                        std::function<void(const NodeType*)> callback) const {
     if (!node)
       return;

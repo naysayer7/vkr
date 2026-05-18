@@ -207,6 +207,7 @@ class DefaultRenderer : public Renderer {
     rtree::Rectangle<float> queryRect = rtree::Rectangle<float>::FromXYWH(
         scene.mouseWorldPos.x, scene.mouseWorldPos.y, 0.0f, 0.0f);
     auto results = scene.rtree.kNN(queryRect, ctx.kNN);
+    float maxDist = 0.0f;
     for (const auto& res : results) {
       const float offset = 0.0f;
       auto x = res->mbr.size[0];
@@ -215,7 +216,17 @@ class DefaultRenderer : public Renderer {
       const ImVec2 p1 = ctx.camera.WorldToScreen(scene.mouseWorldPos, ctx);
       const float thickness = 2.0f * ctx.camera.zoom;
       ctx.dl->AddLine(p0, p1, ImGui::GetColorU32(col), thickness);
+
+      maxDist =
+          std::max(maxDist, std::sqrt(std::powf(x - scene.mouseWorldPos.x, 2) +
+                                      std::powf(y - scene.mouseWorldPos.y, 2)));
     }
+
+    col = ImGui::GetStyleColorVec4(ImGuiCol_PlotLines);
+    col.w = 0.20f;
+    float circleSize = maxDist * ctx.camera.zoom;
+    ctx.dl->AddCircleFilled(ctx.camera.WorldToScreen(scene.mouseWorldPos, ctx),
+                            circleSize, ImGui::GetColorU32(col));
   }
 
  public:
@@ -254,10 +265,12 @@ class DefaultRenderer : public Renderer {
     if (ctx.showObjects) {
       ImGui::PushFont(NULL,
                       12.0f * ctx.camera.zoom / ImGui::GetIO().FontGlobalScale);
-      auto tl = ctx.camera.ScreenToWorld(ImVec2{ctx.viewportMin.x, ctx.viewportMin.y}, ctx);
-      auto br = ctx.camera.ScreenToWorld(ImVec2{ctx.viewportMax.x, ctx.viewportMax.y}, ctx);
-      auto objectsToDraw =
-          scene.rtree.Search(rtree::Rectangle<float>::FromXYWH(tl.x, tl.y, br.x - tl.x, br.y - tl.y));
+      auto tl = ctx.camera.ScreenToWorld(
+          ImVec2{ctx.viewportMin.x, ctx.viewportMin.y}, ctx);
+      auto br = ctx.camera.ScreenToWorld(
+          ImVec2{ctx.viewportMax.x, ctx.viewportMax.y}, ctx);
+      auto objectsToDraw = scene.rtree.Search(rtree::Rectangle<float>::FromXYWH(
+          tl.x, tl.y, br.x - tl.x, br.y - tl.y));
       for (auto obj : objectsToDraw) {
         const auto& x = obj->mbr.size[0];
         const auto& y = obj->mbr.size[1];

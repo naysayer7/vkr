@@ -39,26 +39,25 @@ struct DemoState {
   Camera2D camera;
   DefaultRenderer renderer;
   bool showObjects = true;
-  bool showMBRs = true;
-  bool showSearch = true;
+  bool showMBRs = false;
+  bool showSearch = false;
   bool showNodeIds = false;
   int kNN = 5;
 
   void Reset() { camera = Camera2D(); }
 };
 
+struct RTreeParameters {
+  int maxEntries = 4;
+  int minEntries = 2;
+};
+
 enum class EvaluationPhase { Setup, Progress, Results };
 
 struct EvaluationResult {
-  std::vector<Measures::Duration> times;
-  Measures::Duration averageTime{0.0};
-  Measures::Duration errorMargin{0.0};
+  std::vector<std::pair<RTreeParameters, std::vector<double>>> times;
 
-  void Reset() {
-    times.clear();
-    averageTime = Measures::Duration{0.0};
-    errorMargin = Measures::Duration{0.0};
-  }
+  void Reset() { times.clear(); }
 };
 
 struct EvaluationState {
@@ -71,11 +70,6 @@ struct EvaluationState {
   void Reset() { run = 0; }
 };
 
-struct RTreeParameters {
-  int maxEntries = 4;
-  int minEntries = 2;
-};
-
 class AppState {
   State m_currentState{State::MainMenu};
   std::size_t m_MemorySize{0};
@@ -86,6 +80,8 @@ class AppState {
   RTreeParameters m_RTreeParams;
   bool m_ShowImGuiDemo = false;
   std::size_t m_ObjSize = 0;
+
+  std::vector<std::pair<std::size_t, std::size_t>> m_Params;  // TODO move
 
   ImVec2 m_MouseWorldPos{0.0f, 0.0f};
   std::unique_ptr<rtree::RTree<float>> m_RTree = nullptr;

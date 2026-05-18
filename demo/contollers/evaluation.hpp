@@ -1,12 +1,13 @@
 #pragma once
 #include <chrono>
+#include <filesystem>
 #include <stdexcept>
+
 
 #include "../measures.hpp"
 #include "npy.hpp"
 #include "rtree.h"
 #include "state.hpp"
-
 
 namespace Controllers {
 
@@ -17,23 +18,34 @@ void Evaluate(AppState& state) {
   thread.detach();
 }
 
+std::vector<double> Evaluation(AppState& state);
 void EvaluationEpoch(AppState& state);
+void SaveEvaluationResults(const AppState& state);
 void EvaluationThreadTarget(AppState& state) {
-  std::vector<Measures::Duration> times;
+  for (const std::pair<std::size_t, std::size_t>& params : state.m_Params) {
+    RTreeParameters rtreeParams{(int)params.first, (int)params.second};
+    state.m_RTreeParams = rtreeParams;
+    state.EnsureRTreeBuiltWithCurrentParameters();
+    std::vector<double> times = Evaluation(state);
+    state.m_EvaluationState.knnResult.times.emplace_back(state.m_RTreeParams,
+                                                         times);
+  }
+
+  Evaluation(state);
+  SaveEvaluationResults(state);
+  state.m_EvaluationState.phase = EvaluationPhase::Results;
+}
+
+std::vector<double> Evaluation(AppState& state) {
+  std::vector<double> times;
   times.reserve(state.m_EvaluationState.numRuns);
-  Measures::Duration totalTime = Measures::Duration(0);
   for (size_t i = 0; i < state.m_EvaluationState.numRuns; ++i) {
     auto time =
         Measures::RunMeasure([&state]() -> void { EvaluationEpoch(state); });
-    times.push_back(time);
-    totalTime += time;
+    times.push_back(time.count());
     state.m_EvaluationState.run++;
-    state.m_EvaluationState.knnResult.averageTime = totalTime / (i + 1);
   }
-
-  state.m_EvaluationState.knnResult.averageTime =
-      totalTime / state.m_EvaluationState.numRuns;
-  state.m_EvaluationState.phase = EvaluationPhase::Results;
+  return times;
 }
 
 void EvaluationEpoch(AppState& state) {
@@ -44,11 +56,29 @@ void EvaluationEpoch(AppState& state) {
 }
 
 void SaveEvaluationResults(const AppState& state) {
-  const std::string filename = "evaluation_results.npy";
+  const std::string resultsDir = std::filesystem::current_path().string() + "/results";
+  if (!std::filesystem::exists(resultsDir)) {
+    std::filesystem::create_directory(resultsDir);
+  }
+  
+  const std::string dirPath =
+      resultsDir + "/evaluation_" + std::to_string(std::time(nullptr));
 
-  npy::write_npy(filename, npy::npy_data_ptr<double>{
-                               state.m_EvaluationState.knnResult.times.data(),
-                               {state.m_EvaluationState.knnResult.times.size()},
-                               false});
+  if (!std::filesystem::exists(dirPath)) {
+    std::filesystem::create_directory(dirPath);
+  }
+
+  for (const auto& [params, times] : state.m_EvaluationState.knnResult.times) {
+    const std::string filename = dirPath + "/knn" +
+                                 std::to_string(state.m_EvaluationState.k) +
+                                 "_" + std::to_string(params.maxEntries) + "_" +
+                                 std::to_string(params.minEntries) + ".npy";
+
+    const double* dataPtr = times.data();
+    npy::shape_t shape{(npy::ndarray_len_t)times.size()};
+    npy::npy_data_ptr<double> data{dataPtr, shape, false};
+    std::printf("Saving result file to %s\n", filename);
+    npy::write_npy(filename, data);
+  }
 }
 }  // namespace Controllers

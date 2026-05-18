@@ -14,6 +14,7 @@
 #include "views/main_menu.hpp"
 #include "views/file_reading.hpp"
 #include "views/building_rtree.hpp"
+#include "views/test.hpp"
 #include "widgets.hpp"
 
 extern unsigned char font_data[];
@@ -107,6 +108,8 @@ int main(int argc, char* argv[]) {
 
     if (state.m_ShowImGuiDemo)
       ImGui::ShowDemoWindow(&state.m_ShowImGuiDemo);
+
+    // Views::TestScreen(running, state);
 
     switch (state.GetCurrentState()) {
       case State::MainMenu:

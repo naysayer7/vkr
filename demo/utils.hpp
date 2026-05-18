@@ -24,4 +24,8 @@ std::string FormatDuration(const Measures::Duration& duration) {
   auto ns = duration_cast<nanoseconds>(duration).count() % 1000;
   return std::format("{} ms {} us {} ns", ms, us, ns);
 }
+
+std::string FormatDuration(const double& duration) {
+  return FormatDuration(Measures::Duration(duration));
+}
 }  // namespace Utils
