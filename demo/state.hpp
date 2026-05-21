@@ -48,26 +48,66 @@ struct DemoState {
 };
 
 struct RTreeParameters {
-  int maxEntries = 4;
   int minEntries = 2;
+  int maxEntries = 4;
 };
 
 enum class EvaluationPhase { Setup, Progress, Results };
 
-struct EvaluationResult {
+struct EvaluationSetupState {
+  std::vector<RTreeParameters> params;
+  int k;
+  int epochs;
+
+  int paramsInput[2];  // min, max
+
+  void Reset() {
+    params.clear();
+    k = 5;
+    epochs = 10;
+    paramsInput[0] = 2;
+    paramsInput[1] = 4;
+  }
+
+  EvaluationSetupState() { Reset(); }
+};
+
+struct EvaluationProgressState {
+  int epochsDone;
+  int epochs;
+  int runsDone;
+  int runs;
+
+  void Reset() {
+    epochsDone = 0;
+    epochs = 0;
+    runsDone = 0;
+    runs = 0;
+  }
+
+  EvaluationProgressState() { Reset(); }
+};
+
+struct EvaluationResultState {
   std::vector<std::pair<RTreeParameters, std::vector<double>>> times;
 
   void Reset() { times.clear(); }
 };
 
 struct EvaluationState {
-  EvaluationResult knnResult;
-  int numRuns = 1000;
-  int k = 5;
-  int run = 0;
   EvaluationPhase phase = EvaluationPhase::Setup;
+  EvaluationSetupState setup;
+  EvaluationProgressState progress;
+  EvaluationResultState result;
 
-  void Reset() { run = 0; }
+  void Reset() {
+    phase = EvaluationPhase::Setup;
+    progress.Reset();
+    setup.Reset();
+    result.Reset();
+  }
+
+  EvaluationState() { Reset(); }
 };
 
 class AppState {
@@ -80,8 +120,6 @@ class AppState {
   RTreeParameters m_RTreeParams;
   bool m_ShowImGuiDemo = false;
   std::size_t m_ObjSize = 0;
-
-  std::vector<std::pair<std::size_t, std::size_t>> m_Params;  // TODO move
 
   ImVec2 m_MouseWorldPos{0.0f, 0.0f};
   std::unique_ptr<rtree::RTree<float>> m_RTree = nullptr;

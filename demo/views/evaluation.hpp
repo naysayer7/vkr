@@ -2,6 +2,7 @@
 #include <chrono>
 #include <format>
 #include "imgui.h"
+#include <stdexcept>
 
 #include "contollers/evaluation.hpp"
 #include "state.hpp"
@@ -9,13 +10,11 @@
 
 namespace Views {
 
-void EvaluationSetup(AppState& state);
-void EvaluationProgress(AppState& state);
-void EvaluationResults(AppState& state);
+void EvaluationSetup(EvaluationSetupState& state);
+void EvaluationProgress(EvaluationProgressState& state);
+void EvaluationResults(EvaluationResultState& state);
 
-void Evaluation(bool& running, AppState& state) {
-  auto& evaluationState = state.m_EvaluationState;
-
+void Evaluation(bool& running, EvaluationState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
@@ -23,15 +22,15 @@ void Evaluation(bool& running, AppState& state) {
   ImGui::Begin(
       "Main window", nullptr,
       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
-  switch (evaluationState.phase) {
+  switch (state.phase) {
     case EvaluationPhase::Setup:
-      EvaluationSetup(state);
+      EvaluationSetup(state.setup);
       break;
     case EvaluationPhase::Progress:
-      EvaluationProgress(state);
+      EvaluationProgress(state.progress);
       break;
     case EvaluationPhase::Results:
-      EvaluationResults(state);
+      EvaluationResults(state.result);
       break;
     default:
       std::unreachable();
@@ -39,12 +38,11 @@ void Evaluation(bool& running, AppState& state) {
   ImGui::End();
 }
 
-void EvaluationSetup(AppState& state) {
-  auto& params = state.m_Params;
-  auto& evState = state.m_EvaluationState;
+void EvaluationSetup(EvaluationSetupState& state) {
+  auto& params = state.params;
   ImGui::Text("Настройки для тестирования");
-  ImGui::InputInt("Количество запросов", &evState.numRuns);
-  ImGui::InputInt("k для kNN", &evState.k);
+  ImGui::InputInt("Количество запросов", &state.epochs);
+  ImGui::InputInt("k для kNN", &state.k);
 
   static ImGuiTableFlags flags =
       ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
@@ -64,49 +62,41 @@ void EvaluationSetup(AppState& state) {
       for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
-        ImGui::Text(std::format("{}", params[row].first).c_str(), 0, row);
+        ImGui::Text(std::format("{}", params[row].minEntries).c_str(), 0, row);
         ImGui::TableSetColumnIndex(1);
-        ImGui::Text(std::format("{}", params[row].second).c_str(), 1, row);
+        ImGui::Text(std::format("{}", params[row].maxEntries).c_str(), 1, row);
       }
     }
     ImGui::EndTable();
   }
 
-  ImGui::InputInt2("R-tree parameters (maxEntries, minEntries)",
-                   (int*)&state.m_RTreeParams);
+  ImGui::InputInt2("Параметры R-дерева", (int*)&state.paramsInput);
+  state.paramsInput[0] = std::max(state.paramsInput[0], 1);
+  state.paramsInput[1] = std::max(state.paramsInput[1], 2 * state.paramsInput[0]);
+
   if (ImGui::Button("+")) {
-    state.m_Params.emplace_back(state.m_RTreeParams.maxEntries,
-                                state.m_RTreeParams.minEntries);
+    state.params.emplace_back(
+        RTreeParameters{state.paramsInput[0], state.paramsInput[1]});
   }
 
   if (ImGui::Button("Начать тестирование")) {
-    Controllers::Evaluate(state);
+    Controllers::Evaluate();
   }
 }
 
-void EvaluationProgress(AppState& state) {
-  const auto& evState = state.m_EvaluationState;
-  const auto& knnResult = evState.knnResult;
-  const auto& lastMeasurement =
-      knnResult.times.empty() ? 0.0 : knnResult.times.back().second.back();
-
+void EvaluationProgress(EvaluationProgressState& state) {
   ImGui::ProgressBar(
-      (float)evState.run / (float)evState.numRuns, ImVec2(0.0f, 0.0f),
-      std::format("Тестирование... {}/{}", evState.run, evState.numRuns)
-          .c_str());
-
-  ImGui::Text(std::format("Последнее измерение: {}",
-                          Utils::FormatDuration(lastMeasurement))
-                  .c_str());
+      (float)state.runsDone / (float)state.runs, ImVec2(0.0f, 0.0f),
+      std::format("Тестирование {}/{}", state.runsDone, state.runs).c_str());
+  ImGui::ProgressBar(
+      (float)state.epochsDone / (float)state.epochs, ImVec2(0.0f, 0.0f),
+      std::format("Эпоха {}/{}", state.epochsDone, state.epochs).c_str());
 }
 
-void EvaluationResults(AppState& state) {
-  const auto& evState = state.m_EvaluationState;
-  const auto& knnResult = evState.knnResult;
+void EvaluationResults(EvaluationResultState& state) {
   ImGui::Text("Результаты тестирования сохранены");
   if (ImGui::Button("Назад в меню")) {
-    state.m_EvaluationState.Reset();
-    state.SetCurrentState(State::MainMenu);
+    AppState::instance().SetCurrentState(State::MainMenu);
   }
 }
 }  // namespace Views
