@@ -45,6 +45,7 @@ void EvaluationThreadTarget(AppState& state) {
       state.m_RTreeParams.maxEntries = M;
       state.m_RTreeParams.minEntries = m;
       state.EnsureRTreeBuiltWithCurrentParameters();
+      state.m_EvaluationState.progress.currentParams = state.m_RTreeParams;
       std::vector<double> times = Evaluation(state);
       state.m_EvaluationState.result.times.emplace_back(RTreeParameters{M, m},
                                                         times);

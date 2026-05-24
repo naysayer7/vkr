@@ -91,11 +91,14 @@ struct EvaluationProgressState {
   int runsDone;
   int runs;
 
+  RTreeParameters currentParams;
+
   void Reset() {
     epochsDone = 0;
     epochs = 0;
     runsDone = 0;
     runs = 0;
+    currentParams = RTreeParameters();
   }
 
   EvaluationProgressState() { Reset(); }

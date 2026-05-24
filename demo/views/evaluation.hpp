@@ -94,6 +94,16 @@ void EvaluationProgress(EvaluationProgressState& state) {
   ImGui::ProgressBar(
       (float)state.runsDone / (float)state.runs, ImVec2(0.0f, 0.0f),
       std::format("Тестирование {}/{}", state.runsDone, state.runs).c_str());
+
+
+  
+  ImGui::Text(
+    std::format("m: {}", state.currentParams.minEntries).c_str()
+  );
+  ImGui::Text(
+    std::format("M: {}", state.currentParams.maxEntries).c_str()
+  );
+
   ImGui::ProgressBar(
       (float)state.epochsDone / (float)state.epochs, ImVec2(0.0f, 0.0f),
       std::format("Эпоха {}/{}", state.epochsDone, state.epochs).c_str());
