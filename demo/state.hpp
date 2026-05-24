@@ -61,6 +61,9 @@ struct EvaluationSetupState {
 
   int paramsInput[2];  // min, max
 
+  int minObjects[2];  // min, max
+  int maxObjects[2];  // min, max
+
   void Reset() {
     params.clear();
     k = 5;
@@ -70,6 +73,16 @@ struct EvaluationSetupState {
   }
 
   EvaluationSetupState() { Reset(); }
+
+  int CalculateRunsCount() {
+    int runs = 0;
+    for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
+      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
+        runs++;
+      }
+    }
+    return runs;
+  }
 };
 
 struct EvaluationProgressState {

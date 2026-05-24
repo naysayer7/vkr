@@ -1,8 +1,8 @@
 #pragma once
 #include <chrono>
 #include <format>
-#include "imgui.h"
 #include <stdexcept>
+#include "imgui.h"
 
 #include "contollers/evaluation.hpp"
 #include "state.hpp"
@@ -41,10 +41,10 @@ void Evaluation(bool& running, EvaluationState& state) {
 void EvaluationSetup(EvaluationSetupState& state) {
   auto& params = state.params;
   ImGui::Text("Настройки для тестирования");
-  ImGui::InputInt("Количество запросов", &state.epochs);
+  ImGui::InputInt("Количество эпох", &state.epochs);
   ImGui::InputInt("k для kNN", &state.k);
 
-  static ImGuiTableFlags flags =
+  /* static ImGuiTableFlags flags =
       ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
       ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV |
       ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
@@ -72,12 +72,18 @@ void EvaluationSetup(EvaluationSetupState& state) {
 
   ImGui::InputInt2("Параметры R-дерева", (int*)&state.paramsInput);
   state.paramsInput[0] = std::max(state.paramsInput[0], 1);
-  state.paramsInput[1] = std::max(state.paramsInput[1], 2 * state.paramsInput[0]);
+  state.paramsInput[1] = std::max(state.paramsInput[1], 2 *
+  state.paramsInput[0]);
 
   if (ImGui::Button("+")) {
     state.params.emplace_back(
         RTreeParameters{state.paramsInput[0], state.paramsInput[1]});
-  }
+  } */
+
+  ImGui::InputInt2("MIN", (int*)&state.minObjects);
+  ImGui::InputInt2("MAX", (int*)&state.maxObjects);
+  ImGui::Text(
+      std::format("Количество тестов: {}", state.CalculateRunsCount()).c_str());
 
   if (ImGui::Button("Начать тестирование")) {
     Controllers::Evaluate();
