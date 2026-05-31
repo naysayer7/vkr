@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -9,7 +10,6 @@
 #include <stack>
 #include <stdexcept>
 #include <vector>
-
 
 namespace rtree {
 template <typename T = float>
@@ -374,8 +374,10 @@ class RTree {
       const double volume = !child->IsEmpty() ? child->mbr.Volume() : 0.0;
 
       if (enlargement < bestEnlargement ||
-          (abs(enlargement - bestEnlargement) <
-               std::numeric_limits<double>::epsilon() &&
+          (std::abs(enlargement - bestEnlargement) <=
+               std::numeric_limits<double>::epsilon() *
+                   std::max({1.0, std::abs(enlargement),
+                             std::abs(bestEnlargement)}) &&
            volume < bestVolume)) {
         bestEnlargement = enlargement;
         bestVolume = volume;
