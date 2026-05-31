@@ -113,6 +113,7 @@ void EvaluationResults(EvaluationResultState& state) {
   ImGui::Text("Результаты тестирования сохранены");
   if (ImGui::Button("Назад в меню")) {
     AppState::instance().SetCurrentState(State::MainMenu);
+    AppState::instance().m_EvaluationState.Reset();
   }
 }
 }  // namespace Views
