@@ -13,8 +13,8 @@ namespace Controllers {
 void EvaluationThreadTarget(AppState& state);
 void Evaluate() {
   AppState& state = AppState::instance();
-  std::thread thread(EvaluationThreadTarget, std::ref(state));
   state.m_EvaluationState.phase = EvaluationPhase::Progress;
+  std::thread thread(EvaluationThreadTarget, std::ref(state));
   thread.detach();
 }
 
@@ -24,10 +24,9 @@ void EvaluationEpoch(const int& k,
                      const rtree::RTree<float>& rtree);
 void SaveEvaluationResults(const AppState& state);
 void EvaluationThreadTarget(AppState& state) {
+  state.m_EvaluationState.progress.Reset();
   state.m_EvaluationState.progress.epochs =
       state.m_EvaluationState.setup.epochs;
-  /* state.m_EvaluationState.progress.runs =
-      state.m_EvaluationState.setup.params.size(); */
 
   const auto& minObjects = state.m_EvaluationState.setup.minObjects;
   const auto& maxObjects = state.m_EvaluationState.setup.maxObjects;
@@ -85,7 +84,7 @@ void EvaluationEpoch(const int& k,
                      const std::vector<rtree::Object<float>>& objects,
                      const rtree::RTree<float>& rtree) {
   for (const auto& obj : objects) {
-    auto neighbors = rtree.kNN(obj.mbr, k);
+    rtree.kNN(obj.mbr, k);
   }
 }
 

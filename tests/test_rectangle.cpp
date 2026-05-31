@@ -229,28 +229,28 @@ TEST(RectangleTest, VolumeNegative) {
   EXPECT_FLOAT_EQ(rect.Volume(), 0.0f);
 }
 
-TEST(RectangleTest, MinDistance) {
+TEST(RectangleTest, MinDistanceSq) {
   Rectangle rect1 = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, 2.0f);
   Rectangle rect2 = Rectangle::FromXYWH(3.0f, 4.0f, 1.0f, 1.0f);
 
-  EXPECT_FLOAT_EQ(rect1.MinDistance(rect2), 5.0f);
-  EXPECT_FLOAT_EQ(rect2.MinDistance(rect1), 5.0f);
+  EXPECT_FLOAT_EQ(rect1.MinDistanceSq(rect2), 5.0f);
+  EXPECT_FLOAT_EQ(rect2.MinDistanceSq(rect1), 5.0f);
 }
 
 TEST(RectangleTest, MinDistanceTouching) {
   Rectangle rect1 = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, 2.0f);
   Rectangle rect2 = Rectangle::FromXYWH(2.0f, 1.0f, 1.0f, 1.0f);
 
-  EXPECT_FLOAT_EQ(rect1.MinDistance(rect2), 0.0f);
-  EXPECT_FLOAT_EQ(rect2.MinDistance(rect1), 0.0f);
+  EXPECT_FLOAT_EQ(rect1.MinDistanceSq(rect2), 0.0f);
+  EXPECT_FLOAT_EQ(rect2.MinDistanceSq(rect1), 0.0f);
 }
 
 TEST(RectangleTest, MinDistanceSeparate) {
   Rectangle rect1 = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, 2.0f);
   Rectangle rect2 = Rectangle::FromXYWH(3.0f, 4.0f, 1.0f, 1.0f);
 
-  EXPECT_FLOAT_EQ(rect1.MinDistance(rect2), 5.0f);
-  EXPECT_FLOAT_EQ(rect2.MinDistance(rect1), 5.0f);
+  EXPECT_FLOAT_EQ(rect1.MinDistanceSq(rect2), 5.0f);
+  EXPECT_FLOAT_EQ(rect2.MinDistanceSq(rect1), 5.0f);
 }
 
 TEST(RectangleTest, MinDistanceDifferentDimensions) {
@@ -258,7 +258,7 @@ TEST(RectangleTest, MinDistanceDifferentDimensions) {
   Rectangle rect2(3);
 
   // ASSERT
-  EXPECT_THROW(rect1.MinDistance(rect2), std::invalid_argument);
+  EXPECT_THROW(rect1.MinDistanceSq(rect2), std::invalid_argument);
 }
 
 TEST(RectangleTest, End) {

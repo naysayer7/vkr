@@ -93,7 +93,7 @@ struct Rectangle {
     return v;
   }
 
-  T MinDistance(const Rectangle& other) const {
+  T MinDistanceSq(const Rectangle& other) const {
     if (n != other.n)
       throw std::invalid_argument(
           "Rectangles must have the same number of "
@@ -293,12 +293,12 @@ class RTree {
         const NodeType* node = reinterpret_cast<const NodeType*>(objPtr);
         if (node->IsLeaf()) {
           for (const ObjectType* obj : node->objects) {
-            T d = obj->mbr.MinDistance(area);
+            T d = obj->mbr.MinDistanceSq(area);
             pq.push({d, obj, QueueEntryType::Object});
           }
         } else {
           for (const NodeType* child : node->children) {
-            T d = child->mbr.MinDistance(area);
+            T d = child->mbr.MinDistanceSq(area);
             pq.push({d, child, QueueEntryType::Node});
           }
         }

@@ -54,12 +54,10 @@ void LoadNpyFile() {
 void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
   npy::npy_data data = npy::read_npy<float>(filePath);
 
-  if (data.shape.size() != 2 || data.shape[1] % 2 != 0) {
+  if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
     throw std::runtime_error(
         "Invalid NPY file format: expected a 2D array with an even number of "
         "columns (representing rectangles as pairs of coordinates and sizes).");
-    return;
-  }
 
   state.m_Objects.clear();
   state.m_Objects.reserve(data.shape[0]);

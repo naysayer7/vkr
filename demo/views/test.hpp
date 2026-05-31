@@ -5,7 +5,7 @@
 #include "state.hpp"
 #include "widgets.hpp"
 
-#include "../contollers/file_loading.hpp"
+#include "../controllers/file_loading.hpp"
 
 namespace Views {
 

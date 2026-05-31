@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include "imgui.h"
 
-#include "contollers/evaluation.hpp"
+#include "controllers/evaluation.hpp"
 #include "state.hpp"
 #include "utils.hpp"
 
@@ -22,7 +22,7 @@ void Evaluation(bool& running, EvaluationState& state) {
   ImGui::Begin(
       "Main window", nullptr,
       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
-  switch (state.phase) {
+  switch (state.phase.load()) {
     case EvaluationPhase::Setup:
       EvaluationSetup(state.setup);
       break;
@@ -91,22 +91,22 @@ void EvaluationSetup(EvaluationSetupState& state) {
 }
 
 void EvaluationProgress(EvaluationProgressState& state) {
-  ImGui::ProgressBar(
-      (float)state.runsDone / (float)state.runs, ImVec2(0.0f, 0.0f),
-      std::format("Тестирование {}/{}", state.runsDone, state.runs).c_str());
-
-
-  
-  ImGui::Text(
-    std::format("m: {}", state.currentParams.minEntries).c_str()
-  );
-  ImGui::Text(
-    std::format("M: {}", state.currentParams.maxEntries).c_str()
-  );
+  const int runsDone = state.runsDone.load();
+  const int runs = state.runs.load();
+  const int epochsDone = state.epochsDone.load();
+  const int epochs = state.epochs.load();
+  const RTreeParameters params = state.currentParams.load();
 
   ImGui::ProgressBar(
-      (float)state.epochsDone / (float)state.epochs, ImVec2(0.0f, 0.0f),
-      std::format("Эпоха {}/{}", state.epochsDone, state.epochs).c_str());
+      (float)runsDone / (float)runs, ImVec2(0.0f, 0.0f),
+      std::format("Тестирование {}/{}", runsDone, runs).c_str());
+
+  ImGui::Text(std::format("m: {}", params.minEntries).c_str());
+  ImGui::Text(std::format("M: {}", params.maxEntries).c_str());
+
+  ImGui::ProgressBar(
+      (float)epochsDone / (float)epochs, ImVec2(0.0f, 0.0f),
+      std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
 void EvaluationResults(EvaluationResultState& state) {

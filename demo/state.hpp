@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <future>
 #include <mutex>
 #include <random>
@@ -68,8 +69,15 @@ struct EvaluationSetupState {
     params.clear();
     k = 5;
     epochs = 10;
+
     paramsInput[0] = 2;
     paramsInput[1] = 4;
+
+    minObjects[0] = 1;
+    minObjects[1] = 5;
+
+    maxObjects[0] = 1;
+    maxObjects[1] = 10;
   }
 
   EvaluationSetupState() { Reset(); }
@@ -86,19 +94,18 @@ struct EvaluationSetupState {
 };
 
 struct EvaluationProgressState {
-  int epochsDone;
-  int epochs;
-  int runsDone;
-  int runs;
-
-  RTreeParameters currentParams;
+  std::atomic<int> epochsDone{0};
+  std::atomic<int> epochs{0};
+  std::atomic<int> runsDone{0};
+  std::atomic<int> runs{0};
+  std::atomic<RTreeParameters> currentParams{{}};
 
   void Reset() {
     epochsDone = 0;
     epochs = 0;
     runsDone = 0;
     runs = 0;
-    currentParams = RTreeParameters();
+    currentParams = RTreeParameters{};
   }
 
   EvaluationProgressState() { Reset(); }
@@ -111,13 +118,13 @@ struct EvaluationResultState {
 };
 
 struct EvaluationState {
-  EvaluationPhase phase = EvaluationPhase::Setup;
+  std::atomic<EvaluationPhase> phase{EvaluationPhase::Setup};
   EvaluationSetupState setup;
   EvaluationProgressState progress;
   EvaluationResultState result;
 
   void Reset() {
-    phase = EvaluationPhase::Setup;
+    phase.store(EvaluationPhase::Setup);
     progress.Reset();
     setup.Reset();
     result.Reset();
