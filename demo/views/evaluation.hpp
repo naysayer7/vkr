@@ -97,6 +97,11 @@ void EvaluationProgress(EvaluationProgressState& state) {
   const int epochs = state.epochs.load();
   const RTreeParameters params = state.currentParams.load();
 
+  if (runs == 0 || epochs == 0) {
+    ImGui::Text("Подготовка к тестированию...");
+    return;
+  }
+
   ImGui::ProgressBar(
       (float)runsDone / (float)runs, ImVec2(0.0f, 0.0f),
       std::format("Тестирование {}/{}", runsDone, runs).c_str());

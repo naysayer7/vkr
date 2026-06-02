@@ -21,7 +21,7 @@ class IndexIterator {
   IndexIterator() = default;
   IndexIterator(value_type index) : index_(index) {}
   const value_type& operator*() const { return index_; }
-  const void operator++() { ++index_; }
+  void operator++() { ++index_; }
   bool operator!=(const IndexIterator& lhs) const {
     return index_ != lhs.index_;
   }
