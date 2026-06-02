@@ -4,8 +4,8 @@
 #include <ranges>
 #include <thread>
 #include "npy.hpp"
-#include "tinyfiledialogs.h"
 
+#include "error.hpp"
 #include "state.hpp"
 
 namespace Controllers {
@@ -52,32 +52,36 @@ void LoadNpyFile() {
 }
 
 void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
-  npy::npy_data data = npy::read_npy<float>(filePath);
+  try {
+    npy::npy_data data = npy::read_npy<float>(filePath);
 
-  if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
-    throw std::runtime_error(
-        "Invalid NPY file format: expected a 2D array with an even number of "
-        "columns (representing rectangles as pairs of coordinates and sizes).");
+    if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
+      throw std::runtime_error(
+          "Неверный формат NPY файла: ожидается 2D массив с чётным числом "
+          "столбцов (пары координата + размер по каждой оси).");
 
-  state.m_Objects.clear();
-  state.m_Objects.reserve(data.shape[0]);
+    state.m_Objects.clear();
+    state.m_Objects.reserve(data.shape[0]);
 
-  std::for_each(std::execution::par, IndexIterator(0),
-                IndexIterator(data.shape[0]),
-                [&data, &state](IndexIterator iter) {
-                  const std::size_t i = static_cast<std::size_t>(*iter);
-                  const uint64_t id = static_cast<uint64_t>(i);
-                  rtree::Rectangle<float> rect(data.shape[1] / 2);
-                  for (size_t j = 0; j < data.shape[1]; ++j)
-                    rect.size[j] = data.data[i * data.shape[1] + j];
-                  const rtree::Object<float> obj(id, rect);
-                  {
-                    // Синхронизация доступа к общему вектору объектов
-                    std::lock_guard<std::mutex> lock(state.m_Mutex);
-                    state.m_Objects.push_back(std::move(obj));
-                  }
-                });
-  state.BuildRTree();
-  state.SetCurrentState(State::MainMenu);
+    std::for_each(std::execution::par, IndexIterator(0),
+                  IndexIterator(data.shape[0]),
+                  [&data, &state](IndexIterator iter) {
+                    const std::size_t i = static_cast<std::size_t>(*iter);
+                    const uint64_t id = static_cast<uint64_t>(i);
+                    rtree::Rectangle<float> rect(data.shape[1] / 2);
+                    for (size_t j = 0; j < data.shape[1]; ++j)
+                      rect.size[j] = data.data[i * data.shape[1] + j];
+                    const rtree::Object<float> obj(id, rect);
+                    {
+                      std::lock_guard<std::mutex> lock(state.m_Mutex);
+                      state.m_Objects.push_back(std::move(obj));
+                    }
+                  });
+    state.BuildRTree();
+    state.SetCurrentState(State::MainMenu);
+  } catch (const std::exception& e) {
+    Error::Show(e.what());
+    state.SetCurrentState(State::MainMenu);
+  }
 }
 }  // namespace Controllers

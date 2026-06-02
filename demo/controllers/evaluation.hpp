@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "../measures.hpp"
+#include "error.hpp"
 #include "npy.hpp"
 #include "rtree.h"
 #include "state.hpp"
@@ -24,46 +25,42 @@ void EvaluationEpoch(const int& k,
                      const rtree::RTree<float>& rtree);
 void SaveEvaluationResults(const AppState& state);
 void EvaluationThreadTarget(AppState& state) {
-  state.m_EvaluationState.progress.Reset();
-  state.m_EvaluationState.progress.epochs =
-      state.m_EvaluationState.setup.epochs;
+  try {
+    state.m_EvaluationState.progress.Reset();
+    state.m_EvaluationState.progress.epochs =
+        state.m_EvaluationState.setup.epochs;
 
-  const auto& minObjects = state.m_EvaluationState.setup.minObjects;
-  const auto& maxObjects = state.m_EvaluationState.setup.maxObjects;
+    const auto& minObjects = state.m_EvaluationState.setup.minObjects;
+    const auto& maxObjects = state.m_EvaluationState.setup.maxObjects;
 
-  state.m_EvaluationState.progress.runsDone = 0;
-  state.m_EvaluationState.progress.runs = 0;
-  for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
-    for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
-      state.m_EvaluationState.progress.runs++;
+    state.m_EvaluationState.progress.runsDone = 0;
+    state.m_EvaluationState.progress.runs = 0;
+    for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
+      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
+        state.m_EvaluationState.progress.runs++;
+      }
     }
-  }
 
-  for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
-    for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
-      state.m_RTreeParams.maxEntries = M;
-      state.m_RTreeParams.minEntries = m;
-      state.EnsureRTreeBuiltWithCurrentParameters();
-      state.m_EvaluationState.progress.currentParams = state.m_RTreeParams;
-      std::vector<double> times = Evaluation(state);
-      state.m_EvaluationState.result.times.emplace_back(RTreeParameters{M, m},
-                                                        times);
-      state.m_EvaluationState.progress.runsDone++;
-      state.m_EvaluationState.progress.epochsDone = 0;
+    for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
+      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
+        state.m_RTreeParams.maxEntries = M;
+        state.m_RTreeParams.minEntries = m;
+        state.EnsureRTreeBuiltWithCurrentParameters();
+        state.m_EvaluationState.progress.currentParams = state.m_RTreeParams;
+        std::vector<double> times = Evaluation(state);
+        state.m_EvaluationState.result.times.emplace_back(RTreeParameters{M, m},
+                                                          times);
+        state.m_EvaluationState.progress.runsDone++;
+        state.m_EvaluationState.progress.epochsDone = 0;
+      }
     }
+
+    SaveEvaluationResults(state);
+    state.m_EvaluationState.phase = EvaluationPhase::Results;
+  } catch (const std::exception& e) {
+    Error::Show(e.what());
+    state.m_EvaluationState.phase.store(EvaluationPhase::Setup);
   }
-
-  /* for (const auto& params : state.m_EvaluationState.setup.params) {
-    state.m_RTreeParams = params;
-    state.EnsureRTreeBuiltWithCurrentParameters();
-    std::vector<double> times = Evaluation(state);
-    state.m_EvaluationState.result.times.emplace_back(params, times);
-    state.m_EvaluationState.progress.runsDone++;
-    state.m_EvaluationState.progress.epochsDone = 0;
-  } */
-
-  SaveEvaluationResults(state);
-  state.m_EvaluationState.phase = EvaluationPhase::Results;
 }
 
 std::vector<double> Evaluation(AppState& state) {

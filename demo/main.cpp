@@ -8,6 +8,7 @@
 #include "backends/imgui_impl_sdlrenderer3.h"
 #include "imgui.h"
 
+#include "error.hpp"
 #include "measures.hpp"
 #include "views/demo.hpp"
 #include "views/evaluation.hpp"
@@ -94,48 +95,52 @@ int main(int argc, char* argv[]) {
   bool running = true;
   AppState& state = AppState::instance();
 
-  while (running) {
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-      ImGui_ImplSDL3_ProcessEvent(&e);
-      if (e.type == SDL_EVENT_QUIT)
-        running = false;
+  try {
+    while (running) {
+      SDL_Event e;
+      while (SDL_PollEvent(&e)) {
+        ImGui_ImplSDL3_ProcessEvent(&e);
+        if (e.type == SDL_EVENT_QUIT)
+          running = false;
+      }
+
+      ImGui_ImplSDLRenderer3_NewFrame();
+      ImGui_ImplSDL3_NewFrame();
+      ImGui::NewFrame();
+
+      if (state.m_ShowImGuiDemo)
+        ImGui::ShowDemoWindow(&state.m_ShowImGuiDemo);
+
+      // Views::TestScreen(running, state);
+
+      switch (state.GetCurrentState()) {
+        case State::MainMenu:
+          Views::MainMenu(running, state);
+          break;
+        case State::Demo:
+          Views::Demo(running, state);
+          break;
+        case State::BuildingRTree:
+          Views::BuildingRTree(running, state);
+          break;
+        case State::FileReading:
+          Views::FileReading(running, state);
+          break;
+        case State::Evaluation:
+          Views::Evaluation(running, state.m_EvaluationState);
+          break;
+        default:
+          break;
+      }
+      ImGui::Render();
+
+      SDL_SetRenderDrawColor(renderer, 12, 12, 12, 255);
+      SDL_RenderClear(renderer);
+      ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+      SDL_RenderPresent(renderer);
     }
-
-    ImGui_ImplSDLRenderer3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-
-    if (state.m_ShowImGuiDemo)
-      ImGui::ShowDemoWindow(&state.m_ShowImGuiDemo);
-
-    // Views::TestScreen(running, state);
-
-    switch (state.GetCurrentState()) {
-      case State::MainMenu:
-        Views::MainMenu(running, state);
-        break;
-      case State::Demo:
-        Views::Demo(running, state);
-        break;
-      case State::BuildingRTree:
-        Views::BuildingRTree(running, state);
-        break;
-      case State::FileReading:
-        Views::FileReading(running, state);
-        break;
-      case State::Evaluation:
-        Views::Evaluation(running, state.m_EvaluationState);
-        break;
-      default:
-        break;
-    }
-    ImGui::Render();
-
-    SDL_SetRenderDrawColor(renderer, 12, 12, 12, 255);
-    SDL_RenderClear(renderer);
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-    SDL_RenderPresent(renderer);
+  } catch (const std::exception& e) {
+    Error::Show(e.what());
   }
 
   ImGui_ImplSDLRenderer3_Shutdown();
