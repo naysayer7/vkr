@@ -1,7 +1,6 @@
 #pragma once
 #include <algorithm>
 #include <execution>
-#include <ranges>
 #include <thread>
 #include "npy.hpp"
 
@@ -15,25 +14,42 @@ class IndexIterator {
   using iterator_category = std::random_access_iterator_tag;
   using value_type = int64_t;
   using difference_type = int64_t;
-  using pointer = int64_t*;
-  using reference = int64_t&;
+  using pointer = const int64_t*;
+  using reference = const int64_t&;
 
   IndexIterator() = default;
-  IndexIterator(value_type index) : index_(index) {}
-  const value_type& operator*() const { return index_; }
-  void operator++() { ++index_; }
-  bool operator!=(const IndexIterator& lhs) const {
-    return index_ != lhs.index_;
-  }
-  const value_type operator+(const IndexIterator& lhs) const {
-    return index_ + lhs.index_;
-  }
-  value_type operator-(const IndexIterator& lhs) const {
-    return index_ - lhs.index_;
+  explicit IndexIterator(value_type index) : index_(index) {}
+
+  reference operator*() const { return index_; }
+  pointer operator->() const { return &index_; }
+
+  IndexIterator& operator++() { ++index_; return *this; }
+  IndexIterator operator++(int) { IndexIterator tmp = *this; ++index_; return tmp; }
+  IndexIterator& operator--() { --index_; return *this; }
+  IndexIterator operator--(int) { IndexIterator tmp = *this; --index_; return tmp; }
+
+  IndexIterator& operator+=(difference_type n) { index_ += n; return *this; }
+  IndexIterator& operator-=(difference_type n) { index_ -= n; return *this; }
+
+  IndexIterator operator+(difference_type n) const { return IndexIterator(index_ + n); }
+  IndexIterator operator-(difference_type n) const { return IndexIterator(index_ - n); }
+  difference_type operator-(const IndexIterator& other) const { return index_ - other.index_; }
+
+  value_type operator[](difference_type n) const { return index_ + n; }
+
+  bool operator==(const IndexIterator& other) const { return index_ == other.index_; }
+  bool operator!=(const IndexIterator& other) const { return index_ != other.index_; }
+  bool operator<(const IndexIterator& other) const { return index_ < other.index_; }
+  bool operator>(const IndexIterator& other) const { return index_ > other.index_; }
+  bool operator<=(const IndexIterator& other) const { return index_ <= other.index_; }
+  bool operator>=(const IndexIterator& other) const { return index_ >= other.index_; }
+
+  friend IndexIterator operator+(difference_type n, const IndexIterator& it) {
+    return IndexIterator(n + it.index_);
   }
 
  private:
-  value_type index_;
+  value_type index_{0};
 };
 
 void LoadNpyFileThreadTarget(AppState& state, std::string filePath);
@@ -65,8 +81,8 @@ void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
 
     std::for_each(std::execution::par, IndexIterator(0),
                   IndexIterator(data.shape[0]),
-                  [&data, &state](IndexIterator iter) {
-                    const std::size_t i = static_cast<std::size_t>(*iter);
+                  [&data, &state](int64_t idx) {
+                    const std::size_t i = static_cast<std::size_t>(idx);
                     const uint64_t id = static_cast<uint64_t>(i);
                     rtree::Rectangle<float> rect(data.shape[1] / 2);
                     for (size_t j = 0; j < data.shape[1]; ++j)

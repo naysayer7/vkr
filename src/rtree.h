@@ -1,13 +1,12 @@
 #pragma once
 #include <algorithm>
-#include <array>
+#include <cassert>
 #include <cmath>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <queue>
 #include <shared_mutex>
-#include <stack>
 #include <stdexcept>
 #include <vector>
 
@@ -58,8 +57,8 @@ struct Rectangle {
   bool Intersects(const Rectangle& other) const {
     if (n != other.n)
       throw std::invalid_argument(
-          "Rectangles must have the same number of "
-          "dimensions for intersection test.");
+          "Прямоугольники должны иметь одинаковое число "
+          "измерений для проверки пересечения.");
     for (std::size_t i = 0; i < n; ++i) {
       if (End(i) < other.size[i] || other.End(i) < size[i])
         return false;
@@ -70,7 +69,7 @@ struct Rectangle {
   Rectangle& Unite(const Rectangle& other) {
     if (n != other.n)
       throw std::invalid_argument(
-          "Rectangles must have the same number of dimensions for union.");
+          "Прямоугольники должны иметь одинаковое число измерений для объединения.");
 
     for (std::size_t i = 0; i < n; ++i) {
       const T minv = std::min(size[i], other.size[i]);
@@ -96,8 +95,8 @@ struct Rectangle {
   T MinDistanceSq(const Rectangle& other) const {
     if (n != other.n)
       throw std::invalid_argument(
-          "Rectangles must have the same number of "
-          "dimensions for distance calculation.");
+          "Прямоугольники должны иметь одинаковое число "
+          "измерений для вычисления расстояния.");
 
     T dist = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
@@ -113,7 +112,7 @@ struct Rectangle {
 
   T End(std::size_t axis) const {
     if (axis >= n)
-      throw std::out_of_range("Axis index out of range in Rectangle::End");
+      throw std::out_of_range("Индекс оси выходит за пределы диапазона в Rectangle::End.");
     return size[axis] + size[axis + n];
   }
 
@@ -190,7 +189,7 @@ class RTree {
         n(n) {
     if (minObjectsPerNode > maxObjectsPerNode / 2)
       throw std::invalid_argument(
-          "minObjectsPerNode must be less than maxObjectsPerNode / 2.");
+          "minObjectsPerNode не должно превышать половины maxObjectsPerNode.");
     root = std::make_unique<NodeType>(n);
   }
 
@@ -407,13 +406,8 @@ class RTree {
     }
 
     NodeType* child = ChooseSubtree(node, obj->mbr);
-    if (!child) {
-      node->objects.push_back(obj);
-      RecomputeMBR(node);
-      if (node->objects.size() <= maxObjectsPerNode)
-        return nullptr;
-      return SplitLeaf(node);
-    }
+    // ChooseSubtree инициализируется children[0] и никогда не возвращает nullptr
+    assert(child != nullptr);
 
     NodeType* splitChild = InsertRecursive(child, obj);
     if (splitChild) {
@@ -434,42 +428,45 @@ class RTree {
    */
   template <typename EntryVec, typename RectFn>
   SeedPair PickSeedsLinear(const EntryVec& entries, RectFn getRect) const {
-    T bestSeparation = -1.0f;
+    T bestSeparation = std::numeric_limits<T>::lowest();
     SeedPair bestSeeds{0, entries.size() > 1 ? 1u : 0u};
 
     for (std::size_t dim = 0; dim < n; ++dim) {
-      std::size_t idxMinStart = 0;
-      std::size_t idxMaxEnd = 0;
-      T minStart = getRect(entries[0]).size[dim];
-      T maxEnd = getRect(entries[0]).End(dim);
+      // Guttman: найти запись с наибольшим нижним краем и запись с наименьшим
+      // верхним краем. Их нормированное расстояние — мера разделённости по оси.
+      std::size_t idxMaxLow = 0;
+      std::size_t idxMinHigh = 0;
+      T maxLow = getRect(entries[0]).size[dim];
+      T minHigh = getRect(entries[0]).End(dim);
 
-      T globalMinStart = minStart;
-      T globalMaxEnd = maxEnd;
+      T globalMinLow = maxLow;
+      T globalMaxHigh = minHigh;
 
       for (std::size_t i = 1; i < entries.size(); ++i) {
         const auto& r = getRect(entries[i]);
         const T s = r.size[dim];
         const T e = r.End(dim);
-        if (s < minStart) {
-          minStart = s;
-          idxMinStart = i;
+        if (s > maxLow) {
+          maxLow = s;
+          idxMaxLow = i;
         }
-        if (e > maxEnd) {
-          maxEnd = e;
-          idxMaxEnd = i;
+        if (e < minHigh) {
+          minHigh = e;
+          idxMinHigh = i;
         }
-        globalMinStart = std::min(globalMinStart, s);
-        globalMaxEnd = std::max(globalMaxEnd, e);
+        globalMinLow = std::min(globalMinLow, s);
+        globalMaxHigh = std::max(globalMaxHigh, e);
       }
 
-      const T width = globalMaxEnd - globalMinStart;
+      const T width = globalMaxHigh - globalMinLow;
       if (width <= 0.0)
         continue;
 
-      const T sep = (maxEnd - minStart) / width;
+      // Отрицательное значение означает перекрытие; выбираем наиболее разделённую пару.
+      const T sep = (maxLow - minHigh) / width;
       if (sep > bestSeparation) {
         bestSeparation = sep;
-        bestSeeds = SeedPair{idxMinStart, idxMaxEnd};
+        bestSeeds = SeedPair{idxMaxLow, idxMinHigh};
       }
     }
 

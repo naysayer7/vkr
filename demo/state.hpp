@@ -1,8 +1,6 @@
 #pragma once
 #include <atomic>
-#include <future>
 #include <mutex>
-#include <random>
 #include <thread>
 #include <vector>
 
@@ -213,7 +211,7 @@ class AppState {
   void BuildRTree() {
     std::lock_guard<std::mutex> lock(m_Mutex);
     if (m_Objects.empty())
-      throw std::runtime_error("Cannot build RTree: no objects loaded");
+      throw std::runtime_error("Невозможно построить R-дерево: объекты не загружены.");
     std::println(
         "Building RTree with {} objects, parameters: maxEntries={}, "
         "minEntries={}",
