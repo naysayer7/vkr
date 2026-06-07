@@ -243,19 +243,19 @@ TEST(RectangleTest, UnionDifferentDimensions) {
 // Volume возвращает произведение размеров по всем осям.
 TEST(RectangleTest, Volume) {
   Rectangle rect = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, 3.0f);
-  EXPECT_FLOAT_EQ(rect.Volume(), 6.0f);
+  EXPECT_FLOAT_EQ((float)rect.Volume(), 6.0f);
 }
 
 // Volume равен нулю, если хотя бы одна сторона равна нулю.
 TEST(RectangleTest, VolumeZero) {
   Rectangle rect = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, 0.0f);
-  EXPECT_FLOAT_EQ(rect.Volume(), 0.0f);
+  EXPECT_FLOAT_EQ((float)rect.Volume(), 0.0f);
 }
 
 // Отрицательный размер трактуется как нулевой при вычислении объёма.
 TEST(RectangleTest, VolumeNegative) {
   Rectangle rect = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, -3.0f);
-  EXPECT_FLOAT_EQ(rect.Volume(), 0.0f);
+  EXPECT_FLOAT_EQ((float)rect.Volume(), 0.0f);
 }
 
 // MinDistanceSq возвращает сумму квадратов расстояний по каждой оси до ближайшей точки.
