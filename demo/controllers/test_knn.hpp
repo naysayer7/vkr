@@ -86,20 +86,13 @@ void TestKnnEpoch(const int& k,
 
 void SaveTestKnnResults(const AppState& state) {
   const std::string resultsDir =
-      std::filesystem::current_path().string() + "/results";
+      std::filesystem::current_path().string() + "/results/knn/" + std::to_string(std::time(nullptr));
   if (!std::filesystem::exists(resultsDir)) {
     std::filesystem::create_directory(resultsDir);
   }
 
-  const std::string dirPath =
-      resultsDir + "/TestKnn_" + std::to_string(std::time(nullptr));
-
-  if (!std::filesystem::exists(dirPath)) {
-    std::filesystem::create_directory(dirPath);
-  }
-
   for (const auto& [params, times] : state.m_TestKnnState.result.times) {
-    const std::string filename = dirPath + "/knn" +
+    const std::string filename = resultsDir + "/" +
                                  std::to_string(state.m_TestKnnState.setup.k) +
                                  "_" + std::to_string(params.maxEntries) + "_" +
                                  std::to_string(params.minEntries) + ".npy";

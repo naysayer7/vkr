@@ -12,12 +12,14 @@
 #include "measures.hpp"
 #include "views/building_rtree.hpp"
 #include "views/demo.hpp"
+#include "views/demo_setup.hpp"
 #include "views/file_reading.hpp"
 #include "views/main_menu.hpp"
 #include "views/test_knn.hpp"
 #include "views/test_memory.hpp"
+#include "views/test_n.hpp"
+#include "views/test_k.hpp"
 #include "widgets.hpp"
-
 
 extern unsigned char font_data[];
 extern unsigned int font_data_len;
@@ -117,6 +119,9 @@ int main(int argc, char* argv[]) {
         case State::MainMenu:
           Views::MainMenu(running, state);
           break;
+        case State::DemoSetup:
+          Views::DemoSetup(running, state);
+          break;
         case State::Demo:
           Views::Demo(running, state);
           break;
@@ -131,6 +136,12 @@ int main(int argc, char* argv[]) {
           break;
         case State::TestMemory:
           Views::TestMemory(running, state.m_TestMemoryState);
+          break;
+        case State::TestN:
+          Views::TestN(running, state.m_TestNState);
+          break;
+        case State::TestK:
+          Views::TestK(running, state.m_TestKState);
           break;
         default:
           break;

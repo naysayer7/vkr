@@ -58,18 +58,19 @@ void TestMemoryThreadTarget(AppState& state) {
 
     const std::string filename =
         resultsDir + "/" + std::to_string(std::time(nullptr)) + "_" +
-        std::to_string(state.GetObjectsCount()) + ".npy";
+        std::to_string(state.GetObjectsCount()) + "_" + std::to_string(state.m_RTree->GetN()) + ".npy";
+    result.savedFilename = filename;
 
     const std::size_t rows = result.memorySizes.size();
-    std::vector<double> flat;
+    std::vector<size_t> flat;
     flat.reserve(rows * 3);
     for (const auto& [params, mem] : result.memorySizes) {
-      flat.push_back(static_cast<double>(params.maxEntries));
-      flat.push_back(static_cast<double>(params.minEntries));
-      flat.push_back(static_cast<double>(mem));
+      flat.push_back(static_cast<size_t>(params.maxEntries));
+      flat.push_back(static_cast<size_t>(params.minEntries));
+      flat.push_back(static_cast<size_t>(mem));
     }
 
-    npy::npy_data_ptr<double> data{
+    npy::npy_data_ptr<size_t> data{
         flat.data(), {(npy::ndarray_len_t)rows, 3}, false};
     std::printf("Saving memory test results to %s\n", filename.c_str());
     npy::write_npy(filename, data);

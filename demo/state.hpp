@@ -10,11 +10,14 @@
 
 enum class State {
   MainMenu,       // Начальное меню
+  DemoSetup,      // Настройка параметров дерева перед демо
   Demo,           // Демонстрация работы R-дерева
   FileReading,    // Чтение NPY файла
   BuildingRTree,  // Построение R-дерева после чтения файла
   TestKnn,        // Тестирование производительности KNN-запросов
   TestMemory,     // Тестирование использования памяти
+  TestN,          // Тестирование KNN по количеству объектов
+  TestK,          // Тестирование KNN по параметру k
 };
 
 template <typename T>
@@ -94,7 +97,11 @@ struct TestMemoryProgressState {
 
 struct TestMemoryResultState {
   std::vector<std::pair<RTreeParameters, std::size_t>> memorySizes;
-  void Reset() { memorySizes.clear(); }
+  std::string savedFilename;
+  void Reset() {
+    memorySizes.clear();
+    savedFilename.clear();
+  }
 };
 
 struct TestMemoryState {
@@ -108,6 +115,114 @@ struct TestMemoryState {
     setup = TestMemorySetupState{};
     progress.Reset();
     result.Reset();
+  }
+};
+
+enum class TestKPhase { Setup, Progress, Results };
+
+struct TestKSetupState {
+  int kMin;
+  int kMax;
+  int kStep;
+  int minEntries;
+  int maxEntries;
+  int epochs;
+
+  void Reset() {
+    kMin = 1; kMax = 20; kStep = 1;
+    minEntries = 2; maxEntries = 4;
+    epochs = 10;
+  }
+
+  TestKSetupState() { Reset(); }
+
+  int CalculateMeasurements() const {
+    if (kStep <= 0 || kMin > kMax) return 0;
+    return (kMax - kMin) / kStep + 1;
+  }
+};
+
+struct TestKProgressState {
+  std::atomic<int> done;
+  std::atomic<int> total;
+  std::atomic<int> epochsDone;
+  std::atomic<int> epochs;
+  std::atomic<int> currentK;
+
+  void Reset() {
+    done = 0; total = 0;
+    epochsDone = 0; epochs = 0;
+    currentK = 0;
+  }
+
+  TestKProgressState() { Reset(); }
+};
+
+struct TestKState {
+  std::atomic<TestKPhase> phase{TestKPhase::Setup};
+  TestKSetupState setup;
+  TestKProgressState progress;
+
+  void Reset() {
+    phase.store(TestKPhase::Setup);
+    setup = TestKSetupState{};
+    progress.Reset();
+  }
+};
+
+enum class TestNPhase { Setup, Progress, Results };
+
+struct TestNSetupState {
+  int minEntries;
+  int maxEntries;
+  int epochs;
+  int step;
+  int k;
+
+  void Reset() {
+    minEntries = 2;
+    maxEntries = 4;
+    epochs = 10;
+    step = 100;
+    k = 5;
+  }
+
+  TestNSetupState() { Reset(); }
+
+  int CalculateMeasurements(int totalObjects) const {
+    if (step <= 0)
+      return 0;
+    return totalObjects / step;
+  }
+};
+
+struct TestNProgressState {
+  std::atomic<int> done;
+  std::atomic<int> total;
+  std::atomic<int> epochsDone;
+  std::atomic<int> epochs;
+  std::atomic<int> currentN;
+
+  void Reset() {
+    done = 0;
+    total = 0;
+    epochsDone = 0;
+    epochs = 0;
+    currentN = 0;
+  }
+
+  TestNProgressState() { Reset(); }
+};
+
+struct TestNState {
+  std::atomic<TestNPhase> phase{TestNPhase::Setup};
+  TestNSetupState setup;
+  TestNProgressState progress;
+
+  void Reset() {
+    phase.store(TestNPhase::Setup);
+    setup = TestNSetupState{};
+    progress.Reset();
   }
 };
 
@@ -207,6 +322,8 @@ class AppState {
   DemoState m_DemoState;
   TestKnnState m_TestKnnState;
   TestMemoryState m_TestMemoryState;
+  TestNState m_TestNState;
+  TestKState m_TestKState;
 
   void RecalculateMemorySize() {
     if (m_RTree)
@@ -239,11 +356,9 @@ class AppState {
   State GetCurrentState() const { return m_currentState; }
 
   bool IsDemoAvaliable() const {
-    if (!m_RTree)
-      return false;
-    if (m_RTree->GetN() != 2)
-      return false;
     if (m_Objects.empty())
+      return false;
+    if (m_Objects[0].mbr.n != 2)
       return false;
     if (m_Objects.size() > 15000)
       return false;

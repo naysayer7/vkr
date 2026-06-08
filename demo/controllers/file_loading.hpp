@@ -93,7 +93,6 @@ void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
                       state.m_Objects.push_back(std::move(obj));
                     }
                   });
-    state.BuildRTree();
     state.SetCurrentState(State::MainMenu);
   } catch (const std::exception& e) {
     Error::Show(e.what());

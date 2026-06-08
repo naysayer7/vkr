@@ -64,16 +64,17 @@ void TestMemoryProgress(TestMemoryProgressState& state) {
     return;
   }
 
-  ImGui::ProgressBar(
-      static_cast<float>(done) / static_cast<float>(total),
-      ImVec2(0.0f, 0.0f),
-      std::format("Тест {}/{}", done, total).c_str());
+  ImGui::ProgressBar(static_cast<float>(done) / static_cast<float>(total),
+                     ImVec2(0.0f, 0.0f),
+                     std::format("Тест {}/{}", done, total).c_str());
 
-  ImGui::Text(std::format("M: {}  m: {}", params.maxEntries, params.minEntries).c_str());
+  ImGui::Text(std::format("M: {}  m: {}", params.maxEntries, params.minEntries)
+                  .c_str());
 }
 
 void TestMemoryResults(TestMemoryResultState& state) {
-  ImGui::Text("Результаты сохранены в results/mem/");
+  ImGui::Text(
+      std::format("Результаты сохранены в {}", state.savedFilename).c_str());
   ImGui::Separator();
 
   if (ImGui::BeginTable("mem_results", 3,
@@ -87,11 +88,11 @@ void TestMemoryResults(TestMemoryResultState& state) {
     for (const auto& [params, mem] : state.memorySizes) {
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
-      ImGui::Text("%d", params.maxEntries);
+      ImGui::Text(std::to_string(params.maxEntries).c_str());
       ImGui::TableSetColumnIndex(1);
-      ImGui::Text("%d", params.minEntries);
+      ImGui::Text(std::to_string(params.minEntries).c_str());
       ImGui::TableSetColumnIndex(2);
-      ImGui::Text("%zu", mem);
+      ImGui::Text(std::to_string(mem).c_str());
     }
     ImGui::EndTable();
   }

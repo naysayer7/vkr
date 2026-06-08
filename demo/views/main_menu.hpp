@@ -39,21 +39,27 @@ void MainMenu(bool& running, AppState& state) {
 
   ImGui::BeginDisabled(!state.IsDemoAvaliable());
   if (ImGui::Button("Demo"))
-    state.SetCurrentState(State::Demo);
+    state.SetCurrentState(State::DemoSetup);
   ImGui::EndDisabled();
 
-  if (state.m_RTree) {
-    if (ImGui::Button("Тестирование KNN")) {
+  if (!state.m_Objects.empty()) {
+    if (ImGui::Button("Тестирование KNN"))
       state.SetCurrentState(State::TestKnn);
-    }
-    if (ImGui::Button("Тестирование использования памяти")) {
+    if (ImGui::Button("Тестирование использования памяти"))
       state.SetCurrentState(State::TestMemory);
-    }
+    if (ImGui::Button("Тестирование KNN по N объектов"))
+      state.SetCurrentState(State::TestN);
+    if (ImGui::Button("Тестирование KNN по k"))
+      state.SetCurrentState(State::TestK);
 
-    ImGui::Text("Loaded RTree with %zu objects, memory size: %.2f MB (%.2f MB)",
-                state.GetObjectsCount(),
-                state.GetRTreeMemorySize() / (1024.0f * 1024.0f),
-                state.m_ObjSize / (1024.0f * 1024.0f));
+    ImGui::Separator();
+    ImGui::Text("Объектов: %zu", state.GetObjectsCount());
+    if (state.m_RTree) {
+      ImGui::Text("Дерево: M=%d  m=%d  %.2f MB",
+                  state.m_RTreeParams.maxEntries,
+                  state.m_RTreeParams.minEntries,
+                  state.GetRTreeMemorySize() / (1024.0f * 1024.0f));
+    }
   }
   ImGui::End();
 }
