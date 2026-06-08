@@ -12,6 +12,25 @@ namespace Controllers {
 
 void TestNThreadTarget(AppState& state);
 
+void SelectTestNFiles(TestNSetupState& setup) {
+  const char* result =
+      tinyfd_openFileDialog("Выберите NPY файлы", "", 0, nullptr, nullptr, 1);
+  if (!result || result[0] == '\0')
+    return;
+  std::string s(result);
+  std::size_t pos = 0;
+  while (true) {
+    auto sep = s.find('|', pos);
+    std::string path =
+        s.substr(pos, sep == std::string::npos ? std::string::npos : sep - pos);
+    if (!path.empty())
+      setup.selectedFiles.push_back(std::move(path));
+    if (sep == std::string::npos)
+      break;
+    pos = sep + 1;
+  }
+}
+
 void StartTestN() {
   AppState& state = AppState::instance();
   state.m_TestNState.phase.store(TestNPhase::Progress);
@@ -28,53 +47,67 @@ void TestNThreadTarget(AppState& state) {
 
     const int M = setup.maxEntries;
     const int m = setup.minEntries;
-    const int step = setup.step;
     const int k = setup.k;
-    const int totalObjects = static_cast<int>(state.m_Objects.size());
-    const int measurements = setup.CalculateMeasurements(totalObjects);
+    const int measurements = setup.CalculateMeasurements();
 
     if (measurements <= 0)
-      throw std::runtime_error(
-          "Недостаточно объектов для тестирования: уменьшите шаг.");
+      throw std::runtime_error("Не выбрано ни одного файла для тестирования.");
 
     progress.total = measurements;
     progress.epochs = setup.epochs;
 
-    const std::string resultsDir =
-        std::filesystem::current_path().string() + "/results/n/" + std::to_string(std::time(nullptr));
+    const std::string resultsDir = std::filesystem::current_path().string() +
+                                   "/results/n/" +
+                                   std::to_string(std::time(nullptr));
     std::filesystem::create_directories(resultsDir);
 
-    const std::size_t dims = state.m_Objects[0].mbr.n;
+    for (int i = 0; i < measurements; ++i) {
+      const std::string& filePath = setup.selectedFiles[i];
 
-    for (int i = 1; i <= measurements; ++i) {
-      const int n = i * step;
-      progress.currentN = n;
+      npy::npy_data<float> data = npy::read_npy<float>(filePath);
+      if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
+        throw std::runtime_error(
+            "Неверный формат файла «" +
+            std::filesystem::path(filePath).filename().string() +
+            "»: ожидается 2D массив с чётным числом столбцов.");
+
+      const std::size_t n = data.shape[0];
+      const std::size_t dims = data.shape[1] / 2;
+
+      std::vector<rtree::Object<float>> objects;
+      objects.reserve(n);
+      for (std::size_t j = 0; j < n; ++j) {
+        rtree::Rectangle<float> rect(dims);
+        for (std::size_t d = 0; d < data.shape[1]; ++d)
+          rect.size[d] = data.data[j * data.shape[1] + d];
+        objects.emplace_back(static_cast<uint64_t>(j), rect);
+      }
+
+      progress.currentN = static_cast<int>(n);
       progress.epochsDone = 0;
 
-      // Строим локальное дерево только из первых n объектов,
-      // не затрагивая state.m_RTree который используется другими тестами.
       auto tree = std::make_unique<rtree::RTree<float>>(M, m, dims);
-      for (int j = 0; j < n; ++j)
-        tree->Insert(&state.m_Objects[j]);
+      for (const auto& obj : objects)
+        tree->Insert(&obj);
 
       std::vector<double> times;
       times.reserve(setup.epochs);
       for (int e = 0; e < setup.epochs; ++e) {
         auto elapsed = Measures::RunMeasure([&]() {
-          for (int j = 0; j < n; ++j)
-            tree->kNN(state.m_Objects[j].mbr, k);
+          for (const auto& obj : objects)
+            tree->kNN(obj.mbr, k);
         });
         times.push_back(elapsed.count());
         progress.epochsDone++;
       }
 
-      const std::string filename = resultsDir + "/" + std::to_string(n) + "_" +
-                                   std::to_string(k) + "_" + std::to_string(M) +
-                                   "_" + std::to_string(m) + ".npy";
-      npy::npy_data_ptr<double> data{
+      const std::string filename =
+          resultsDir + "/" + std::to_string(n) + "_" + std::to_string(k) +
+          "_" + std::to_string(M) + "_" + std::to_string(m) + ".npy";
+      npy::npy_data_ptr<double> out{
           times.data(), {(npy::ndarray_len_t)times.size()}, false};
       std::printf("Saving %s\n", filename.c_str());
-      npy::write_npy(filename, data);
+      npy::write_npy(filename, out);
 
       progress.done++;
     }

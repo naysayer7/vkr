@@ -176,23 +176,21 @@ struct TestNSetupState {
   int minEntries;
   int maxEntries;
   int epochs;
-  int step;
   int k;
+  std::vector<std::string> selectedFiles;
 
   void Reset() {
     minEntries = 2;
     maxEntries = 4;
     epochs = 10;
-    step = 100;
     k = 5;
+    selectedFiles.clear();
   }
 
   TestNSetupState() { Reset(); }
 
-  int CalculateMeasurements(int totalObjects) const {
-    if (step <= 0)
-      return 0;
-    return totalObjects / step;
+  int CalculateMeasurements() const {
+    return static_cast<int>(selectedFiles.size());
   }
 };
 

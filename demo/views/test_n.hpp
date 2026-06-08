@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <format>
 #include "imgui.h"
 
@@ -42,22 +43,47 @@ void TestNSetup(TestNSetupState& state) {
   ImGui::InputInt("M (maxEntries)", &state.maxEntries);
   ImGui::InputInt("m (minEntries)", &state.minEntries);
   ImGui::InputInt("Эпох на измерение", &state.epochs);
-  ImGui::InputInt("Шаг (объектов)", &state.step);
   ImGui::InputInt("k для kNN", &state.k);
 
   state.maxEntries = std::max(state.maxEntries, 2);
   state.minEntries = std::max(1, std::min(state.minEntries, state.maxEntries / 2));
   state.epochs     = std::max(state.epochs, 1);
-  state.step       = std::max(state.step, 1);
   state.k          = std::max(state.k, 1);
 
-  const int total        = static_cast<int>(AppState::instance().GetObjectsCount());
-  const int measurements = state.CalculateMeasurements(total);
-  ImGui::Text(std::format("Измерений: {} (всего объектов: {}, шаг: {})",
-                          measurements, total, state.step).c_str());
+  ImGui::Spacing();
+  ImGui::Text("Датасеты (%d файлов):", (int)state.selectedFiles.size());
 
+  for (int i = 0; i < (int)state.selectedFiles.size(); ++i) {
+    const std::string name =
+        std::filesystem::path(state.selectedFiles[i]).filename().string();
+    ImGui::Text("  %s", name.c_str());
+    ImGui::SameLine();
+    if (ImGui::Button(std::format("Удалить##f{}", i).c_str())) {
+      state.selectedFiles.erase(state.selectedFiles.begin() + i);
+      --i;
+    }
+  }
+
+  if (ImGui::Button("Добавить файлы"))
+    Controllers::SelectTestNFiles(state);
+
+  if (!state.selectedFiles.empty()) {
+    if (ImGui::Button("Очистить список"))
+      state.selectedFiles.clear();
+  }
+
+  ImGui::Spacing();
+  ImGui::Text("Измерений: %d", state.CalculateMeasurements());
+
+  ImGui::Spacing();
+  ImGui::BeginDisabled(state.selectedFiles.empty());
   if (ImGui::Button("Начать тестирование"))
     Controllers::StartTestN();
+  ImGui::EndDisabled();
+
+  ImGui::SameLine();
+  if (ImGui::Button("Назад"))
+    AppState::instance().SetCurrentState(State::MainMenu);
 }
 
 void TestNProgress(TestNProgressState& state) {
@@ -72,14 +98,14 @@ void TestNProgress(TestNProgressState& state) {
     return;
   }
 
-  // Фракция учитывает прогресс эпох внутри текущего измерения,
-  // чтобы бар не залипал пока идут эпохи.
-  const float epochFraction = static_cast<float>(epochsDone) / static_cast<float>(epochs);
-  const float outerFraction = (static_cast<float>(done) + epochFraction) / static_cast<float>(total);
+  const float epochFraction =
+      static_cast<float>(epochsDone) / static_cast<float>(epochs);
+  const float outerFraction =
+      (static_cast<float>(done) + epochFraction) / static_cast<float>(total);
 
   ImGui::ProgressBar(
       outerFraction, ImVec2(0.0f, 0.0f),
-      std::format("Измерение {}/{}  N={}",
+      std::format("Датасет {}/{}  N={}",
                   std::min(done + 1, total), total, currentN).c_str());
 
   ImGui::ProgressBar(
