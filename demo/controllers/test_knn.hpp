@@ -11,33 +11,33 @@
 
 namespace Controllers {
 
-void EvaluationThreadTarget(AppState& state);
+void TestKnnThreadTarget(AppState& state);
 void Evaluate() {
   AppState& state = AppState::instance();
-  state.m_EvaluationState.phase = EvaluationPhase::Progress;
-  std::thread thread(EvaluationThreadTarget, std::ref(state));
+  state.m_TestKnnState.phase = TestKnnPhase::Progress;
+  std::thread thread(TestKnnThreadTarget, std::ref(state));
   thread.detach();
 }
 
-std::vector<double> Evaluation(AppState& state);
-void EvaluationEpoch(const int& k,
+std::vector<double> TestKnn(AppState& state);
+void TestKnnEpoch(const int& k,
                      const std::vector<rtree::Object<float>>& objects,
                      const rtree::RTree<float>& rtree);
-void SaveEvaluationResults(const AppState& state);
-void EvaluationThreadTarget(AppState& state) {
+void SaveTestKnnResults(const AppState& state);
+void TestKnnThreadTarget(AppState& state) {
   try {
-    state.m_EvaluationState.progress.Reset();
-    state.m_EvaluationState.progress.epochs =
-        state.m_EvaluationState.setup.epochs;
+    state.m_TestKnnState.progress.Reset();
+    state.m_TestKnnState.progress.epochs =
+        state.m_TestKnnState.setup.epochs;
 
-    const auto& minObjects = state.m_EvaluationState.setup.minObjects;
-    const auto& maxObjects = state.m_EvaluationState.setup.maxObjects;
+    const auto& minObjects = state.m_TestKnnState.setup.minObjects;
+    const auto& maxObjects = state.m_TestKnnState.setup.maxObjects;
 
-    state.m_EvaluationState.progress.runsDone = 0;
-    state.m_EvaluationState.progress.runs = 0;
+    state.m_TestKnnState.progress.runsDone = 0;
+    state.m_TestKnnState.progress.runs = 0;
     for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
       for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
-        state.m_EvaluationState.progress.runs++;
+        state.m_TestKnnState.progress.runs++;
       }
     }
 
@@ -46,38 +46,38 @@ void EvaluationThreadTarget(AppState& state) {
         state.m_RTreeParams.maxEntries = M;
         state.m_RTreeParams.minEntries = m;
         state.EnsureRTreeBuiltWithCurrentParameters();
-        state.m_EvaluationState.progress.currentParams = state.m_RTreeParams;
-        std::vector<double> times = Evaluation(state);
-        state.m_EvaluationState.result.times.emplace_back(RTreeParameters{M, m},
+        state.m_TestKnnState.progress.currentParams = state.m_RTreeParams;
+        std::vector<double> times = TestKnn(state);
+        state.m_TestKnnState.result.times.emplace_back(RTreeParameters{M, m},
                                                           times);
-        state.m_EvaluationState.progress.runsDone++;
-        state.m_EvaluationState.progress.epochsDone = 0;
+        state.m_TestKnnState.progress.runsDone++;
+        state.m_TestKnnState.progress.epochsDone = 0;
       }
     }
 
-    SaveEvaluationResults(state);
-    state.m_EvaluationState.phase = EvaluationPhase::Results;
+    SaveTestKnnResults(state);
+    state.m_TestKnnState.phase = TestKnnPhase::Results;
   } catch (const std::exception& e) {
     Error::Show(e.what());
-    state.m_EvaluationState.phase.store(EvaluationPhase::Setup);
+    state.m_TestKnnState.phase.store(TestKnnPhase::Setup);
   }
 }
 
-std::vector<double> Evaluation(AppState& state) {
+std::vector<double> TestKnn(AppState& state) {
   std::vector<double> times;
-  times.reserve(state.m_EvaluationState.setup.epochs);
-  for (size_t i = 0; i < state.m_EvaluationState.setup.epochs; ++i) {
+  times.reserve(state.m_TestKnnState.setup.epochs);
+  for (size_t i = 0; i < state.m_TestKnnState.setup.epochs; ++i) {
     auto time = Measures::RunMeasure([&state]() -> void {
-      EvaluationEpoch(state.m_EvaluationState.setup.k, state.m_Objects,
+      TestKnnEpoch(state.m_TestKnnState.setup.k, state.m_Objects,
                       *state.m_RTree);
     });
     times.push_back(time.count());
-    state.m_EvaluationState.progress.epochsDone++;
+    state.m_TestKnnState.progress.epochsDone++;
   }
   return times;
 }
 
-void EvaluationEpoch(const int& k,
+void TestKnnEpoch(const int& k,
                      const std::vector<rtree::Object<float>>& objects,
                      const rtree::RTree<float>& rtree) {
   for (const auto& obj : objects) {
@@ -85,7 +85,7 @@ void EvaluationEpoch(const int& k,
   }
 }
 
-void SaveEvaluationResults(const AppState& state) {
+void SaveTestKnnResults(const AppState& state) {
   const std::string resultsDir =
       std::filesystem::current_path().string() + "/results";
   if (!std::filesystem::exists(resultsDir)) {
@@ -93,15 +93,15 @@ void SaveEvaluationResults(const AppState& state) {
   }
 
   const std::string dirPath =
-      resultsDir + "/evaluation_" + std::to_string(std::time(nullptr));
+      resultsDir + "/TestKnn_" + std::to_string(std::time(nullptr));
 
   if (!std::filesystem::exists(dirPath)) {
     std::filesystem::create_directory(dirPath);
   }
 
-  for (const auto& [params, times] : state.m_EvaluationState.result.times) {
+  for (const auto& [params, times] : state.m_TestKnnState.result.times) {
     const std::string filename =
-        dirPath + "/knn" + std::to_string(state.m_EvaluationState.setup.k) +
+        dirPath + "/knn" + std::to_string(state.m_TestKnnState.setup.k) +
         "_" + std::to_string(params.maxEntries) + "_" +
         std::to_string(params.minEntries) + ".npy";
 

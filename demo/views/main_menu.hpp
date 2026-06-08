@@ -43,15 +43,13 @@ void MainMenu(bool& running, AppState& state) {
   ImGui::EndDisabled();
 
   if (state.m_RTree) {
-    if (ImGui::Button("Test RTree")) {
-      state.SetCurrentState(State::Evaluation);
+    if (ImGui::Button("Тестирование KNN")) {
+      state.SetCurrentState(State::TestKnn);
+    }
+    if (ImGui::Button("Тестирование использования памяти")) {
+      state.SetCurrentState(State::TestKnn);
     }
 
-    if (ImGui::Button("Free tree")) {
-      state.m_RTree.reset();
-      state.m_Objects.clear();
-      state.RecalculateMemorySize();
-    }
     ImGui::Text("Loaded RTree with %zu objects, memory size: %.2f MB (%.2f MB)",
                 state.GetObjectsCount(),
                 state.GetRTreeMemorySize() / (1024.0f * 1024.0f),

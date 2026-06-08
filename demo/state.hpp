@@ -13,7 +13,7 @@ enum class State {
   Demo,           // Демонстрация работы R-дерева
   FileReading,    // Чтение NPY файла
   BuildingRTree,  // Построение R-дерева после чтения файла
-  Evaluation,     // Тестирование производительности и точности
+  TestKnn,     // Тестирование производительности и точности
 };
 
 template <typename T>
@@ -51,9 +51,9 @@ struct RTreeParameters {
   int maxEntries = 4;
 };
 
-enum class EvaluationPhase { Setup, Progress, Results };
+enum class TestKnnPhase { Setup, Progress, Results };
 
-struct EvaluationSetupState {
+struct TestKnnSetupState {
   std::vector<RTreeParameters> params;
   int k;
   int epochs;
@@ -78,7 +78,7 @@ struct EvaluationSetupState {
     maxObjects[1] = 10;
   }
 
-  EvaluationSetupState() { Reset(); }
+  TestKnnSetupState() { Reset(); }
 
   int CalculateRunsCount() {
     int runs = 0;
@@ -91,7 +91,7 @@ struct EvaluationSetupState {
   }
 };
 
-struct EvaluationProgressState {
+struct TestKnnProgressState {
   std::atomic<int> epochsDone{0};
   std::atomic<int> epochs{0};
   std::atomic<int> runsDone{0};
@@ -106,29 +106,29 @@ struct EvaluationProgressState {
     currentParams = RTreeParameters{};
   }
 
-  EvaluationProgressState() { Reset(); }
+  TestKnnProgressState() { Reset(); }
 };
 
-struct EvaluationResultState {
+struct TestKnnResultState {
   std::vector<std::pair<RTreeParameters, std::vector<double>>> times;
 
   void Reset() { times.clear(); }
 };
 
-struct EvaluationState {
-  std::atomic<EvaluationPhase> phase{EvaluationPhase::Setup};
-  EvaluationSetupState setup;
-  EvaluationProgressState progress;
-  EvaluationResultState result;
+struct TestKnnState {
+  std::atomic<TestKnnPhase> phase{TestKnnPhase::Setup};
+  TestKnnSetupState setup;
+  TestKnnProgressState progress;
+  TestKnnResultState result;
 
   void Reset() {
-    phase.store(EvaluationPhase::Setup);
+    phase.store(TestKnnPhase::Setup);
     progress.Reset();
     setup.Reset();
     result.Reset();
   }
 
-  EvaluationState() { Reset(); }
+  TestKnnState() { Reset(); }
 };
 
 class AppState {
@@ -147,7 +147,7 @@ class AppState {
   std::vector<rtree::Object<float>> m_Objects;
   BuildingRTreeState<float> m_BuildingRTreeState;
   DemoState m_DemoState;
-  EvaluationState m_EvaluationState;
+  TestKnnState m_TestKnnState;
 
   void RecalculateMemorySize() {
     if (m_RTree)

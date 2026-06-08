@@ -4,17 +4,17 @@
 #include <stdexcept>
 #include "imgui.h"
 
-#include "controllers/evaluation.hpp"
+#include "controllers/test_knn.hpp"
 #include "state.hpp"
 #include "utils.hpp"
 
 namespace Views {
 
-void EvaluationSetup(EvaluationSetupState& state);
-void EvaluationProgress(EvaluationProgressState& state);
-void EvaluationResults(EvaluationResultState& state);
+void TestKnnSetup(TestKnnSetupState& state);
+void TestKnnProgress(TestKnnProgressState& state);
+void TestKnnResults(TestKnnResultState& state);
 
-void Evaluation(bool& running, EvaluationState& state) {
+void TestKnn(bool& running, TestKnnState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
@@ -23,14 +23,14 @@ void Evaluation(bool& running, EvaluationState& state) {
       "Main window", nullptr,
       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
   switch (state.phase.load()) {
-    case EvaluationPhase::Setup:
-      EvaluationSetup(state.setup);
+    case TestKnnPhase::Setup:
+      TestKnnSetup(state.setup);
       break;
-    case EvaluationPhase::Progress:
-      EvaluationProgress(state.progress);
+    case TestKnnPhase::Progress:
+      TestKnnProgress(state.progress);
       break;
-    case EvaluationPhase::Results:
-      EvaluationResults(state.result);
+    case TestKnnPhase::Results:
+      TestKnnResults(state.result);
       break;
     default:
       std::unreachable();
@@ -38,7 +38,7 @@ void Evaluation(bool& running, EvaluationState& state) {
   ImGui::End();
 }
 
-void EvaluationSetup(EvaluationSetupState& state) {
+void TestKnnSetup(TestKnnSetupState& state) {
   auto& params = state.params;
   ImGui::Text("Настройки для тестирования");
   ImGui::InputInt("Количество эпох", &state.epochs);
@@ -90,7 +90,7 @@ void EvaluationSetup(EvaluationSetupState& state) {
   }
 }
 
-void EvaluationProgress(EvaluationProgressState& state) {
+void TestKnnProgress(TestKnnProgressState& state) {
   const int runsDone = state.runsDone.load();
   const int runs = state.runs.load();
   const int epochsDone = state.epochsDone.load();
@@ -114,11 +114,11 @@ void EvaluationProgress(EvaluationProgressState& state) {
       std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
-void EvaluationResults(EvaluationResultState& state) {
+void TestKnnResults(TestKnnResultState& state) {
   ImGui::Text("Результаты тестирования сохранены");
   if (ImGui::Button("Назад в меню")) {
     AppState::instance().SetCurrentState(State::MainMenu);
-    AppState::instance().m_EvaluationState.Reset();
+    AppState::instance().m_TestKnnState.Reset();
   }
 }
 }  // namespace Views

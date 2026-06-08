@@ -11,17 +11,15 @@
 #include "error.hpp"
 #include "measures.hpp"
 #include "views/demo.hpp"
-#include "views/evaluation.hpp"
+#include "views/test_knn.hpp"
 #include "views/main_menu.hpp"
 #include "views/file_reading.hpp"
 #include "views/building_rtree.hpp"
-/* #include "views/test.hpp" */
 #include "widgets.hpp"
 
 extern unsigned char font_data[];
 extern unsigned int font_data_len;
 ImFont* loadFont();
-void BuildingRTree(bool& running, AppState& state);
 
 int main(int argc, char* argv[]) {
   // argc argv не используются
@@ -126,8 +124,8 @@ int main(int argc, char* argv[]) {
         case State::FileReading:
           Views::FileReading(running, state);
           break;
-        case State::Evaluation:
-          Views::Evaluation(running, state.m_EvaluationState);
+        case State::TestKnn:
+          Views::TestKnn(running, state.m_TestKnnState);
           break;
         default:
           break;
