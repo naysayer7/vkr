@@ -93,7 +93,8 @@ TEST(RectangleTest, Zero) {
     EXPECT_FLOAT_EQ(rect.size[i], static_cast<T>(0));
 }
 
-// FromXYWH правильно заполняет поля: первые n — координаты начала, следующие n — размеры.
+// FromXYWH правильно заполняет поля: первые n — координаты начала, следующие n
+// — размеры.
 TEST(RectangleTest, FromXYWH) {
   T x = 1.0f, y = 2.0f, width = 3.0f, height = 4.0f;
   Rectangle rect = Rectangle::FromXYWH(x, y, width, height);
@@ -105,7 +106,8 @@ TEST(RectangleTest, FromXYWH) {
   EXPECT_FLOAT_EQ(rect.size[3], height);
 }
 
-// Два частично перекрывающихся прямоугольника пересекаются в обоих направлениях.
+// Два частично перекрывающихся прямоугольника пересекаются в обоих
+// направлениях.
 TEST(RectangleTest, Intersects) {
   Rectangle rect1 = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, 2.0f);
   Rectangle rect2 = Rectangle::FromXYWH(1.0f, 1.0f, 3.0f, 3.0f);
@@ -258,7 +260,8 @@ TEST(RectangleTest, VolumeNegative) {
   EXPECT_FLOAT_EQ((float)rect.Volume(), 0.0f);
 }
 
-// MinDistanceSq возвращает сумму квадратов расстояний по каждой оси до ближайшей точки.
+// MinDistanceSq возвращает сумму квадратов расстояний по каждой оси до
+// ближайшей точки.
 TEST(RectangleTest, MinDistanceSq) {
   Rectangle rect1 = Rectangle::FromXYWH(0.0f, 0.0f, 2.0f, 2.0f);
   Rectangle rect2 = Rectangle::FromXYWH(3.0f, 4.0f, 1.0f, 1.0f);
@@ -293,7 +296,8 @@ TEST(RectangleTest, MinDistanceDifferentDimensions) {
   EXPECT_THROW(rect1.MinDistanceSq(rect2), std::invalid_argument);
 }
 
-// End возвращает координату правого/нижнего края по заданной оси (начало + размер).
+// End возвращает координату правого/нижнего края по заданной оси (начало +
+// размер).
 TEST(RectangleTest, End) {
   Rectangle rect = Rectangle::FromXYWH(1.0f, 2.0f, 3.0f, 4.0f);
 
