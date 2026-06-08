@@ -21,14 +21,13 @@ void Evaluate() {
 
 std::vector<double> TestKnn(AppState& state);
 void TestKnnEpoch(const int& k,
-                     const std::vector<rtree::Object<float>>& objects,
-                     const rtree::RTree<float>& rtree);
+                  const std::vector<rtree::Object<float>>& objects,
+                  const rtree::RTree<float>& rtree);
 void SaveTestKnnResults(const AppState& state);
 void TestKnnThreadTarget(AppState& state) {
   try {
     state.m_TestKnnState.progress.Reset();
-    state.m_TestKnnState.progress.epochs =
-        state.m_TestKnnState.setup.epochs;
+    state.m_TestKnnState.progress.epochs = state.m_TestKnnState.setup.epochs;
 
     const auto& minObjects = state.m_TestKnnState.setup.minObjects;
     const auto& maxObjects = state.m_TestKnnState.setup.maxObjects;
@@ -49,7 +48,7 @@ void TestKnnThreadTarget(AppState& state) {
         state.m_TestKnnState.progress.currentParams = state.m_RTreeParams;
         std::vector<double> times = TestKnn(state);
         state.m_TestKnnState.result.times.emplace_back(RTreeParameters{M, m},
-                                                          times);
+                                                       times);
         state.m_TestKnnState.progress.runsDone++;
         state.m_TestKnnState.progress.epochsDone = 0;
       }
@@ -69,7 +68,7 @@ std::vector<double> TestKnn(AppState& state) {
   for (size_t i = 0; i < state.m_TestKnnState.setup.epochs; ++i) {
     auto time = Measures::RunMeasure([&state]() -> void {
       TestKnnEpoch(state.m_TestKnnState.setup.k, state.m_Objects,
-                      *state.m_RTree);
+                   *state.m_RTree);
     });
     times.push_back(time.count());
     state.m_TestKnnState.progress.epochsDone++;
@@ -78,8 +77,8 @@ std::vector<double> TestKnn(AppState& state) {
 }
 
 void TestKnnEpoch(const int& k,
-                     const std::vector<rtree::Object<float>>& objects,
-                     const rtree::RTree<float>& rtree) {
+                  const std::vector<rtree::Object<float>>& objects,
+                  const rtree::RTree<float>& rtree) {
   for (const auto& obj : objects) {
     rtree.kNN(obj.mbr, k);
   }
@@ -100,10 +99,10 @@ void SaveTestKnnResults(const AppState& state) {
   }
 
   for (const auto& [params, times] : state.m_TestKnnState.result.times) {
-    const std::string filename =
-        dirPath + "/knn" + std::to_string(state.m_TestKnnState.setup.k) +
-        "_" + std::to_string(params.maxEntries) + "_" +
-        std::to_string(params.minEntries) + ".npy";
+    const std::string filename = dirPath + "/knn" +
+                                 std::to_string(state.m_TestKnnState.setup.k) +
+                                 "_" + std::to_string(params.maxEntries) + "_" +
+                                 std::to_string(params.minEntries) + ".npy";
 
     const double* dataPtr = times.data();
     npy::shape_t shape{(npy::ndarray_len_t)times.size()};

@@ -47,14 +47,14 @@ void MainMenu(bool& running, AppState& state) {
       state.SetCurrentState(State::TestKnn);
     }
     if (ImGui::Button("Тестирование использования памяти")) {
-      state.SetCurrentState(State::TestKnn);
+      state.SetCurrentState(State::TestMemory);
     }
 
     ImGui::Text("Loaded RTree with %zu objects, memory size: %.2f MB (%.2f MB)",
                 state.GetObjectsCount(),
                 state.GetRTreeMemorySize() / (1024.0f * 1024.0f),
                 state.m_ObjSize / (1024.0f * 1024.0f));
-  } 
+  }
   ImGui::End();
 }
 

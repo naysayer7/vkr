@@ -10,12 +10,14 @@
 
 #include "error.hpp"
 #include "measures.hpp"
-#include "views/demo.hpp"
-#include "views/test_knn.hpp"
-#include "views/main_menu.hpp"
-#include "views/file_reading.hpp"
 #include "views/building_rtree.hpp"
+#include "views/demo.hpp"
+#include "views/file_reading.hpp"
+#include "views/main_menu.hpp"
+#include "views/test_knn.hpp"
+#include "views/test_memory.hpp"
 #include "widgets.hpp"
+
 
 extern unsigned char font_data[];
 extern unsigned int font_data_len;
@@ -126,6 +128,9 @@ int main(int argc, char* argv[]) {
           break;
         case State::TestKnn:
           Views::TestKnn(running, state.m_TestKnnState);
+          break;
+        case State::TestMemory:
+          Views::TestMemory(running, state.m_TestMemoryState);
           break;
         default:
           break;

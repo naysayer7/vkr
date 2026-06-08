@@ -69,7 +69,8 @@ struct Rectangle {
   Rectangle& Unite(const Rectangle& other) {
     if (n != other.n)
       throw std::invalid_argument(
-          "Прямоугольники должны иметь одинаковое число измерений для объединения.");
+          "Прямоугольники должны иметь одинаковое число измерений для "
+          "объединения.");
 
     for (std::size_t i = 0; i < n; ++i) {
       const T minv = std::min(size[i], other.size[i]);
@@ -112,7 +113,8 @@ struct Rectangle {
 
   T End(std::size_t axis) const {
     if (axis >= n)
-      throw std::out_of_range("Индекс оси выходит за пределы диапазона в Rectangle::End.");
+      throw std::out_of_range(
+          "Индекс оси выходит за пределы диапазона в Rectangle::End.");
     return size[axis] + size[axis + n];
   }
 
@@ -406,7 +408,8 @@ class RTree {
     }
 
     NodeType* child = ChooseSubtree(node, obj->mbr);
-    // ChooseSubtree инициализируется children[0] и никогда не возвращает nullptr
+    // ChooseSubtree инициализируется children[0] и никогда не возвращает
+    // nullptr
     assert(child != nullptr);
 
     NodeType* splitChild = InsertRecursive(child, obj);
@@ -462,7 +465,8 @@ class RTree {
       if (width <= 0.0)
         continue;
 
-      // Отрицательное значение означает перекрытие; выбираем наиболее разделённую пару.
+      // Отрицательное значение означает перекрытие; выбираем наиболее
+      // разделённую пару.
       const T sep = (maxLow - minHigh) / width;
       if (sep > bestSeparation) {
         bestSeparation = sep;

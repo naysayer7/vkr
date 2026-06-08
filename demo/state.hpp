@@ -13,7 +13,8 @@ enum class State {
   Demo,           // Демонстрация работы R-дерева
   FileReading,    // Чтение NPY файла
   BuildingRTree,  // Построение R-дерева после чтения файла
-  TestKnn,     // Тестирование производительности и точности
+  TestKnn,        // Тестирование производительности KNN-запросов
+  TestMemory,     // Тестирование использования памяти
 };
 
 template <typename T>
@@ -52,6 +53,63 @@ struct RTreeParameters {
 };
 
 enum class TestKnnPhase { Setup, Progress, Results };
+
+enum class TestMemoryPhase { Setup, Progress, Results };
+
+struct TestMemorySetupState {
+  int minObjects[2];
+  int maxObjects[2];
+
+  void Reset() {
+    minObjects[0] = 1;
+    minObjects[1] = 5;
+    maxObjects[0] = 1;
+    maxObjects[1] = 10;
+  }
+
+  TestMemorySetupState() { Reset(); }
+
+  int CalculateRunsCount() const {
+    int runs = 0;
+    for (int M = maxObjects[0]; M <= maxObjects[1]; ++M)
+      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m)
+        runs++;
+    return runs;
+  }
+};
+
+struct TestMemoryProgressState {
+  std::atomic<int> done;
+  std::atomic<int> total;
+  std::atomic<RTreeParameters> currentParams;
+
+  void Reset() {
+    done = 0;
+    total = 0;
+    currentParams = RTreeParameters{};
+  }
+
+  TestMemoryProgressState() { Reset(); }
+};
+
+struct TestMemoryResultState {
+  std::vector<std::pair<RTreeParameters, std::size_t>> memorySizes;
+  void Reset() { memorySizes.clear(); }
+};
+
+struct TestMemoryState {
+  std::atomic<TestMemoryPhase> phase{TestMemoryPhase::Setup};
+  TestMemorySetupState setup;
+  TestMemoryProgressState progress;
+  TestMemoryResultState result;
+
+  void Reset() {
+    phase.store(TestMemoryPhase::Setup);
+    setup = TestMemorySetupState{};
+    progress.Reset();
+    result.Reset();
+  }
+};
 
 struct TestKnnSetupState {
   std::vector<RTreeParameters> params;
@@ -148,6 +206,7 @@ class AppState {
   BuildingRTreeState<float> m_BuildingRTreeState;
   DemoState m_DemoState;
   TestKnnState m_TestKnnState;
+  TestMemoryState m_TestMemoryState;
 
   void RecalculateMemorySize() {
     if (m_RTree)
@@ -211,7 +270,8 @@ class AppState {
   void BuildRTree() {
     std::lock_guard<std::mutex> lock(m_Mutex);
     if (m_Objects.empty())
-      throw std::runtime_error("Невозможно построить R-дерево: объекты не загружены.");
+      throw std::runtime_error(
+          "Невозможно построить R-дерево: объекты не загружены.");
     std::println(
         "Building RTree with {} objects, parameters: maxEntries={}, "
         "minEntries={}",
