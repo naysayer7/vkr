@@ -9,12 +9,13 @@
 #include <shared_mutex>
 #include <stdexcept>
 #include <vector>
+#include <variant>
 
 namespace rtree {
 template <typename T = float>
 struct Rectangle {
   std::unique_ptr<T[]> size = nullptr;
-  const std::size_t n;
+  std::size_t n;
 
   Rectangle(std::size_t n) : n(n) { size = std::make_unique<T[]>(n * 2); }
 
@@ -31,7 +32,10 @@ struct Rectangle {
     if (this == &other)
       return *this;
 
-    assert(n == other.n);
+    if (n != other.n) {
+      size = std::make_unique<T[]>(other.n * 2);
+      n = other.n;
+    }
 
     for (std::size_t i = 0; i < n * 2; ++i)
       size[i] = other.size[i];
@@ -42,8 +46,11 @@ struct Rectangle {
   Rectangle& operator=(Rectangle&& other) noexcept {
     if (this == &other)
       return *this;
-      
-    assert(n == other.n);
+
+    if (n != other.n) {
+      size = std::make_unique<T[]>(other.n * 2);
+      n = other.n;
+    }
 
     size = std::move(other.size);
 
@@ -282,13 +289,9 @@ class RTree {
   // page 278
   std::vector<const ObjectType*> kNN(const RectangleType& area,
                                      std::size_t k) const {
-    enum class QueueEntryType { Node, Object };
-
     struct QueueEntry {
       T dist;
-      const void* objectOrNode;  // Указатель на NodeType или ObjectType, в
-                                 // зависимости от type.
-      QueueEntryType type;
+      std::variant<const NodeType*, const ObjectType*> entity; 
 
       bool operator<(const QueueEntry& other) const {
         return dist > other.dist;  // Меньше - выше приоритет
@@ -300,24 +303,24 @@ class RTree {
     std::vector<const ObjectType*> result;
     result.reserve(k);
     std::priority_queue<QueueEntry> pq;
-    pq.push({0.0, this->root.get(), QueueEntryType::Node});
+    pq.push({0.0, this->root.get()});
     while (!pq.empty() && result.size() < k) {
-      auto [dist, objPtr, type] = pq.top();
+      auto [dist, entity] = pq.top();
       pq.pop();
-      if (type == QueueEntryType::Object) {
-        // Report object
-        result.push_back(reinterpret_cast<const ObjectType*>(objPtr));
+      if (std::holds_alternative<const ObjectType*>(entity)) {
+        // добавляем объект в результат
+        result.push_back(std::get<const ObjectType*>(entity));
       } else {
-        const NodeType* node = reinterpret_cast<const NodeType*>(objPtr);
+        const NodeType* node = std::get<const NodeType*>(entity);
         if (node->IsLeaf()) {
           for (const ObjectType* obj : node->objects) {
             T d = obj->mbr.MinDistanceSq(area);
-            pq.push({d, obj, QueueEntryType::Object});
+            pq.push({d, obj});
           }
         } else {
           for (const NodeType* child : node->children) {
             T d = child->mbr.MinDistanceSq(area);
-            pq.push({d, child, QueueEntryType::Node});
+            pq.push({d, child});
           }
         }
       }
@@ -698,7 +701,7 @@ class RTree {
   void SearchRecursive(const NodeType* node,
                        const RectangleType& area,
                        std::vector<const ObjectType*>& results,
-                       std::function<void(const NodeType*)> callback) const {
+                       std::function<void(const NodeType*)> &callback) const {
     if (!node)
       return;
     callback(node);
