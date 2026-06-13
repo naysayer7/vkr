@@ -501,19 +501,30 @@ class RTree {
     return bestSeeds;
   }
 
-  NodeType* SplitLeaf(NodeType* node) {
-    NodeType* sibling = new NodeType(n);
+  template <typename Entry>
+  struct SplitGroups {
+    std::vector<Entry> groupA;
+    std::vector<Entry> groupB;
+    RectangleType mbrA;
+    RectangleType mbrB;
+  };
 
-    std::vector<const ObjectType*> entries;
-    entries.swap(node->objects);
+  /**
+   * Распределяет записи узла по двум группам линейным алгоритмом Гуттмана:
+   * выбирает семена через PickSeedsLinear, затем по очереди добавляет
+   * оставшиеся записи в группу с минимальным увеличением MBR, соблюдая
+   * минимальную заполненность узла. Общая логика для разбиения листьев и
+   * внутренних узлов.
+   * @param entries Записи разбиваемого узла (объекты или дочерние узлы).
+   * @param getRect Функция, возвращающая MBR записи.
+   */
+  template <typename Entry, typename RectFn>
+  SplitGroups<Entry> SplitEntries(const std::vector<Entry>& entries,
+                                  RectFn getRect) const {
+    const SeedPair seeds = PickSeedsLinear(entries, getRect);
 
-    auto rectOf = [](const ObjectType* o) -> const RectangleType& {
-      return o->mbr;
-    };
-    const SeedPair seeds = PickSeedsLinear(entries, rectOf);
-
-    std::vector<const ObjectType*> groupA;
-    std::vector<const ObjectType*> groupB;
+    std::vector<Entry> groupA;
+    std::vector<Entry> groupB;
     groupA.reserve(entries.size());
     groupB.reserve(entries.size());
     groupA.push_back(entries[seeds.first]);
@@ -524,8 +535,8 @@ class RTree {
     used[seeds.first] = true;
     used[seeds.second] = true;
 
-    RectangleType mbrA = groupA[0]->mbr;
-    RectangleType mbrB = groupB[0]->mbr;
+    RectangleType mbrA = getRect(entries[seeds.first]);
+    RectangleType mbrB = getRect(entries[seeds.second]);
 
     const size_t minFill = minObjectsPerNode;
 
@@ -539,7 +550,7 @@ class RTree {
           used[i] = true;
           --remaining;
           groupA.push_back(entries[i]);
-          mbrA.Unite(entries[i]->mbr);
+          mbrA.Unite(getRect(entries[i]));
         }
         break;
       }
@@ -551,7 +562,7 @@ class RTree {
           used[i] = true;
           --remaining;
           groupB.push_back(entries[i]);
-          mbrB.Unite(entries[i]->mbr);
+          mbrB.Unite(getRect(entries[i]));
         }
         break;
       }
@@ -563,7 +574,7 @@ class RTree {
       if (pick >= entries.size())
         break;
 
-      const RectangleType& r = entries[pick]->mbr;
+      const RectangleType& r = getRect(entries[pick]);
       const double eA = Enlargement(mbrA, r);
       const double eB = Enlargement(mbrB, r);
       const double vA = mbrA.Volume();
@@ -592,12 +603,26 @@ class RTree {
       }
     }
 
-    node->objects = std::move(groupA);
-    sibling->objects = std::move(groupB);
+    return SplitGroups<Entry>{std::move(groupA), std::move(groupB),
+                              std::move(mbrA), std::move(mbrB)};
+  }
+
+  NodeType* SplitLeaf(NodeType* node) {
+    NodeType* sibling = new NodeType(n);
+
+    std::vector<const ObjectType*> entries;
+    entries.swap(node->objects);
+
+    auto split = SplitEntries(
+        entries,
+        [](const ObjectType* o) -> const RectangleType& { return o->mbr; });
+
+    node->objects = std::move(split.groupA);
+    sibling->objects = std::move(split.groupB);
     node->children.clear();
     sibling->children.clear();
-    node->mbr = mbrA;
-    sibling->mbr = mbrB;
+    node->mbr = std::move(split.mbrA);
+    sibling->mbr = std::move(split.mbrB);
     return sibling;
   }
 
@@ -607,94 +632,16 @@ class RTree {
     std::vector<NodeType*> entries;
     entries.swap(node->children);
 
-    auto rectOf = [](const NodeType* n) -> const RectangleType& {
-      return n->mbr;
-    };
-    const SeedPair seeds = PickSeedsLinear(entries, rectOf);
+    auto split = SplitEntries(
+        entries,
+        [](const NodeType* nd) -> const RectangleType& { return nd->mbr; });
 
-    std::vector<NodeType*> groupA;
-    std::vector<NodeType*> groupB;
-    groupA.reserve(entries.size());
-    groupB.reserve(entries.size());
-    groupA.push_back(entries[seeds.first]);
-    groupB.push_back(entries[seeds.second]);
-
-    std::vector<bool> used(entries.size(), false);
-    used[seeds.first] = true;
-    used[seeds.second] = true;
-
-    RectangleType mbrA = entries[seeds.first]->mbr;
-    RectangleType mbrB = entries[seeds.second]->mbr;
-
-    const size_t minFill = minObjectsPerNode;
-
-    for (std::size_t remaining = entries.size() - 2; remaining > 0;) {
-      if (static_cast<int>(groupA.size()) + static_cast<int>(remaining) ==
-          minFill) {
-        for (std::size_t i = 0; i < entries.size(); ++i) {
-          if (used[i])
-            continue;
-          used[i] = true;
-          --remaining;
-          groupA.push_back(entries[i]);
-          mbrA.Unite(entries[i]->mbr);
-        }
-        break;
-      }
-      if (static_cast<int>(groupB.size()) + static_cast<int>(remaining) ==
-          minFill) {
-        for (std::size_t i = 0; i < entries.size(); ++i) {
-          if (used[i])
-            continue;
-          used[i] = true;
-          --remaining;
-          groupB.push_back(entries[i]);
-          mbrB.Unite(entries[i]->mbr);
-        }
-        break;
-      }
-
-      std::size_t pick = 0;
-      while (pick < entries.size() && used[pick])
-        ++pick;
-      if (pick >= entries.size())
-        break;
-
-      const RectangleType& r = entries[pick]->mbr;
-      const double eA = Enlargement(mbrA, r);
-      const double eB = Enlargement(mbrB, r);
-      const double vA = mbrA.Volume();
-      const double vB = mbrB.Volume();
-
-      bool toA = false;
-      if (eA < eB)
-        toA = true;
-      else if (eB < eA)
-        toA = false;
-      else if (vA < vB)
-        toA = true;
-      else if (vB < vA)
-        toA = false;
-      else
-        toA = (groupA.size() <= groupB.size());
-
-      used[pick] = true;
-      --remaining;
-      if (toA) {
-        groupA.push_back(entries[pick]);
-        mbrA.Unite(r);
-      } else {
-        groupB.push_back(entries[pick]);
-        mbrB.Unite(r);
-      }
-    }
-
-    node->children = std::move(groupA);
-    sibling->children = std::move(groupB);
+    node->children = std::move(split.groupA);
+    sibling->children = std::move(split.groupB);
     node->objects.clear();
     sibling->objects.clear();
-    node->mbr = mbrA;
-    sibling->mbr = mbrB;
+    node->mbr = std::move(split.mbrA);
+    sibling->mbr = std::move(split.mbrB);
     return sibling;
   }
 
