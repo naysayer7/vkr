@@ -14,7 +14,7 @@ void TestKnnSetup(TestKnnSetupState& state);
 void TestKnnProgress(TestKnnProgressState& state);
 void TestKnnResults(TestKnnResultState& state);
 
-void TestKnn(bool& running, TestKnnState& state) {
+inline void TestKnn(bool& running, TestKnnState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
@@ -38,7 +38,7 @@ void TestKnn(bool& running, TestKnnState& state) {
   ImGui::End();
 }
 
-void TestKnnSetup(TestKnnSetupState& state) {
+inline void TestKnnSetup(TestKnnSetupState& state) {
   auto& params = state.params;
   ImGui::Text("Настройки для тестирования");
   ImGui::InputInt("Количество эпох", &state.epochs);
@@ -54,7 +54,7 @@ void TestKnnSetup(TestKnnSetupState& state) {
   }
 }
 
-void TestKnnProgress(TestKnnProgressState& state) {
+inline void TestKnnProgress(TestKnnProgressState& state) {
   const int runsDone = state.runsDone.load();
   const int runs = state.runs.load();
   const int epochsDone = state.epochsDone.load();
@@ -78,7 +78,7 @@ void TestKnnProgress(TestKnnProgressState& state) {
       std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
-void TestKnnResults(TestKnnResultState& state) {
+inline void TestKnnResults(TestKnnResultState& state) {
   ImGui::Text("Результаты тестирования сохранены");
   if (ImGui::Button("Назад в меню")) {
     AppState::instance().SetCurrentState(State::MainMenu);

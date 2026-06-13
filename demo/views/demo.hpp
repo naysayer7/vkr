@@ -7,7 +7,7 @@
 
 namespace Views {
 
-void Demo(bool& running, AppState& state) {
+inline void Demo(bool& running, AppState& state) {
   // Main menu
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {

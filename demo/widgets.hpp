@@ -10,7 +10,7 @@
 #include "utils.hpp"
 
 namespace Widgets {
-void Viewport() {
+inline void Viewport() {
   AppState& state = AppState::instance();
   Camera2D& camera = state.m_DemoState.camera;
   Renderer& renderer = state.m_DemoState.renderer;

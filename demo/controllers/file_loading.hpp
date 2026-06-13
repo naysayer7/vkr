@@ -53,7 +53,7 @@ class IndexIterator {
 };
 
 void LoadNpyFileThreadTarget(AppState& state, std::string filePath);
-void LoadNpyFile() {
+inline void LoadNpyFile() {
   AppState& state = AppState::instance();
   const char* selectedPath =
       tinyfd_openFileDialog("Select NPY file", "", 0, nullptr, nullptr, 0);
@@ -67,7 +67,7 @@ void LoadNpyFile() {
   fileLoadingThread.detach();
 }
 
-void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
+inline void LoadNpyFileThreadTarget(AppState& state, std::string filePath) {
   try {
     npy::npy_data data = npy::read_npy<float>(filePath);
 

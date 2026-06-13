@@ -5,7 +5,7 @@
 
 namespace Views {
 
-void MainMenu(bool& running, AppState& state) {
+inline void MainMenu(bool& running, AppState& state) {
   if (ImGui::BeginMainMenuBar()) {
     /* if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Load npy file"))

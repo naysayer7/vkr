@@ -11,7 +11,7 @@ void TestKSetup(TestKSetupState& state);
 void TestKProgress(TestKProgressState& state);
 void TestKResults();
 
-void TestK(bool& running, TestKState& state) {
+inline void TestK(bool& running, TestKState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
@@ -35,7 +35,7 @@ void TestK(bool& running, TestKState& state) {
   ImGui::End();
 }
 
-void TestKSetup(TestKSetupState& state) {
+inline void TestKSetup(TestKSetupState& state) {
   ImGui::Text("Тестирование kNN по параметру k");
   ImGui::Separator();
 
@@ -63,7 +63,7 @@ void TestKSetup(TestKSetupState& state) {
     Controllers::StartTestK();
 }
 
-void TestKProgress(TestKProgressState& state) {
+inline void TestKProgress(TestKProgressState& state) {
   const int done       = state.done.load();
   const int total      = state.total.load();
   const int epochsDone = state.epochsDone.load();
@@ -88,7 +88,7 @@ void TestKProgress(TestKProgressState& state) {
       std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
-void TestKResults() {
+inline void TestKResults() {
   ImGui::Text("Результаты сохранены в results/k/");
   ImGui::Separator();
   ImGui::Text("Формат файлов: {k}_{M}_{m}.npy");

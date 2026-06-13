@@ -13,7 +13,7 @@
 namespace Controllers {
 
 void TestKnnThreadTarget(AppState& state);
-void Evaluate() {
+inline void Evaluate() {
   AppState& state = AppState::instance();
   state.m_TestKnnState.phase = TestKnnPhase::Progress;
   std::thread thread(TestKnnThreadTarget, std::ref(state));
@@ -25,7 +25,7 @@ void TestKnnEpoch(const int& k,
                   const std::vector<rtree::Object<float>>& objects,
                   const rtree::RTree<float>& rtree);
 void SaveTestKnnResults(const AppState& state);
-void TestKnnThreadTarget(AppState& state) {
+inline void TestKnnThreadTarget(AppState& state) {
   try {
     state.m_TestKnnState.progress.Reset();
     state.m_TestKnnState.progress.epochs = state.m_TestKnnState.setup.epochs;
@@ -58,7 +58,7 @@ void TestKnnThreadTarget(AppState& state) {
   }
 }
 
-std::vector<double> TestKnn(AppState& state) {
+inline std::vector<double> TestKnn(AppState& state) {
   std::vector<double> times;
   times.reserve(state.m_TestKnnState.setup.epochs);
   for (size_t i = 0; i < state.m_TestKnnState.setup.epochs; ++i) {
@@ -72,7 +72,7 @@ std::vector<double> TestKnn(AppState& state) {
   return times;
 }
 
-void TestKnnEpoch(const int& k,
+inline void TestKnnEpoch(const int& k,
                   const std::vector<rtree::Object<float>>& objects,
                   const rtree::RTree<float>& rtree) {
   for (const auto& obj : objects) {
@@ -80,7 +80,7 @@ void TestKnnEpoch(const int& k,
   }
 }
 
-void SaveTestKnnResults(const AppState& state) {
+inline void SaveTestKnnResults(const AppState& state) {
   const std::string resultsDir =
       std::filesystem::current_path().string() + "/results/knn/" + std::to_string(std::time(nullptr));
   if (!std::filesystem::exists(resultsDir)) {

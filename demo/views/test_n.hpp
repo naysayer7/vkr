@@ -12,7 +12,7 @@ void TestNSetup(TestNSetupState& state);
 void TestNProgress(TestNProgressState& state);
 void TestNResults();
 
-void TestN(bool& running, TestNState& state) {
+inline void TestN(bool& running, TestNState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
@@ -36,7 +36,7 @@ void TestN(bool& running, TestNState& state) {
   ImGui::End();
 }
 
-void TestNSetup(TestNSetupState& state) {
+inline void TestNSetup(TestNSetupState& state) {
   ImGui::Text("Тестирование kNN по количеству объектов");
   ImGui::Separator();
 
@@ -86,7 +86,7 @@ void TestNSetup(TestNSetupState& state) {
     AppState::instance().SetCurrentState(State::MainMenu);
 }
 
-void TestNProgress(TestNProgressState& state) {
+inline void TestNProgress(TestNProgressState& state) {
   const int done       = state.done.load();
   const int total      = state.total.load();
   const int epochsDone = state.epochsDone.load();
@@ -113,7 +113,7 @@ void TestNProgress(TestNProgressState& state) {
       std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
-void TestNResults() {
+inline void TestNResults() {
   ImGui::Text("Результаты сохранены в results/n/");
   ImGui::Separator();
   ImGui::Text("Формат файлов: {n}_{k}_{M}_{m}.npy");

@@ -12,14 +12,14 @@ namespace Controllers {
 
 void TestKThreadTarget(AppState& state);
 
-void StartTestK() {
+inline void StartTestK() {
   AppState& state = AppState::instance();
   state.m_TestKState.phase.store(TestKPhase::Progress);
   std::thread t(TestKThreadTarget, std::ref(state));
   t.detach();
 }
 
-void TestKThreadTarget(AppState& state) {
+inline void TestKThreadTarget(AppState& state) {
   try {
     TestKProgressState& progress = state.m_TestKState.progress;
     const TestKSetupState& setup = state.m_TestKState.setup;

@@ -12,14 +12,14 @@ namespace Controllers {
 
 void TestMemoryThreadTarget(AppState& state);
 
-void StartTestMemory() {
+inline void StartTestMemory() {
   AppState& state = AppState::instance();
   state.m_TestMemoryState.phase.store(TestMemoryPhase::Progress);
   std::thread t(TestMemoryThreadTarget, std::ref(state));
   t.detach();
 }
 
-void TestMemoryThreadTarget(AppState& state) {
+inline void TestMemoryThreadTarget(AppState& state) {
   try {
     TestMemoryProgressState& progress = state.m_TestMemoryState.progress;
     TestMemoryResultState& result = state.m_TestMemoryState.result;

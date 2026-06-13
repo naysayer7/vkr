@@ -12,7 +12,7 @@ void TestMemorySetup(TestMemorySetupState& state);
 void TestMemoryProgress(TestMemoryProgressState& state);
 void TestMemoryResults(TestMemoryResultState& state);
 
-void TestMemory(bool& running, TestMemoryState& state) {
+inline void TestMemory(bool& running, TestMemoryState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
@@ -36,7 +36,7 @@ void TestMemory(bool& running, TestMemoryState& state) {
   ImGui::End();
 }
 
-void TestMemorySetup(TestMemorySetupState& state) {
+inline void TestMemorySetup(TestMemorySetupState& state) {
   ImGui::Text("Тестирование использования памяти");
   ImGui::Separator();
   ImGui::InputInt2("M (maxEntries) диапазон", state.maxObjects);
@@ -57,7 +57,7 @@ void TestMemorySetup(TestMemorySetupState& state) {
     Controllers::StartTestMemory();
 }
 
-void TestMemoryProgress(TestMemoryProgressState& state) {
+inline void TestMemoryProgress(TestMemoryProgressState& state) {
   const int done = state.done.load();
   const int total = state.total.load();
   const RTreeParameters params = state.currentParams.load();
@@ -75,7 +75,7 @@ void TestMemoryProgress(TestMemoryProgressState& state) {
                   .c_str());
 }
 
-void TestMemoryResults(TestMemoryResultState& state) {
+inline void TestMemoryResults(TestMemoryResultState& state) {
   ImGui::Text(
       std::format("Результаты сохранены в {}", state.savedFilename).c_str());
   ImGui::Separator();

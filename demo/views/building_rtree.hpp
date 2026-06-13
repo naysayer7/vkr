@@ -7,7 +7,7 @@
 
 namespace Views {
 
-void BuildingRTree(bool& running, AppState& state) {
+inline void BuildingRTree(bool& running, AppState& state) {
   // Fullscreen host window
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);

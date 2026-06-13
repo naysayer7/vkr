@@ -8,7 +8,7 @@
 
 namespace Views {
 
-void DemoSetup(bool& running, AppState& state) {
+inline void DemoSetup(bool& running, AppState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);

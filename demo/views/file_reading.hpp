@@ -5,7 +5,7 @@
 
 namespace Views {
 
-void FileReading(bool& running, AppState& state) {
+inline void FileReading(bool& running, AppState& state) {
   // Fullscreen host window
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);

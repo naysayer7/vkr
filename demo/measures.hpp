@@ -7,7 +7,7 @@ namespace Measures {
 
 typedef std::chrono::duration<double, std::nano> Duration;
 
-Duration RunMeasure(const std::function<void()>& func) {
+inline Duration RunMeasure(const std::function<void()>& func) {
   const auto start = std::chrono::high_resolution_clock::now();
   func();
   const auto elapsed = std::chrono::high_resolution_clock::now() - start;

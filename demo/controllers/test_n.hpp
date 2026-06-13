@@ -12,7 +12,7 @@ namespace Controllers {
 
 void TestNThreadTarget(AppState& state);
 
-void SelectTestNFiles(TestNSetupState& setup) {
+inline void SelectTestNFiles(TestNSetupState& setup) {
   const char* result =
       tinyfd_openFileDialog("Выберите NPY файлы", "", 0, nullptr, nullptr, 1);
   if (!result || result[0] == '\0')
@@ -31,14 +31,14 @@ void SelectTestNFiles(TestNSetupState& setup) {
   }
 }
 
-void StartTestN() {
+inline void StartTestN() {
   AppState& state = AppState::instance();
   state.m_TestNState.phase.store(TestNPhase::Progress);
   std::thread t(TestNThreadTarget, std::ref(state));
   t.detach();
 }
 
-void TestNThreadTarget(AppState& state) {
+inline void TestNThreadTarget(AppState& state) {
   try {
     TestNProgressState& progress = state.m_TestNState.progress;
     const TestNSetupState& setup = state.m_TestNState.setup;
