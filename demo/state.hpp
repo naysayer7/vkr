@@ -71,14 +71,6 @@ struct TestMemorySetupState {
   }
 
   TestMemorySetupState() { Reset(); }
-
-  int CalculateRunsCount() const {
-    int runs = 0;
-    for (int M = maxObjects[0]; M <= maxObjects[1]; ++M)
-      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m)
-        runs++;
-    return runs;
-  }
 };
 
 struct TestMemoryProgressState {
@@ -250,16 +242,6 @@ struct TestKnnSetupState {
   }
 
   TestKnnSetupState() { Reset(); }
-
-  int CalculateRunsCount() {
-    int runs = 0;
-    for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
-      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
-        runs++;
-      }
-    }
-    return runs;
-  }
 };
 
 struct TestKnnProgressState {

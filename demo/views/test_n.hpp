@@ -46,7 +46,7 @@ void TestNSetup(TestNSetupState& state) {
   ImGui::InputInt("k для kNN", &state.k);
 
   state.maxEntries = std::max(state.maxEntries, 2);
-  state.minEntries = std::max(1, std::min(state.minEntries, state.maxEntries / 2));
+  state.minEntries = std::max(1, std::min(state.minEntries, (state.maxEntries + 1) / 2));
   state.epochs     = std::max(state.epochs, 1);
   state.k          = std::max(state.k, 1);
 

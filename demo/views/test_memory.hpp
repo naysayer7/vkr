@@ -4,6 +4,7 @@
 
 #include "controllers/test_memory.hpp"
 #include "state.hpp"
+#include "utils.hpp"
 
 namespace Views {
 
@@ -48,7 +49,9 @@ void TestMemorySetup(TestMemorySetupState& state) {
   state.minObjects[1] = std::max(state.minObjects[1], state.minObjects[0]);
 
   ImGui::Text(
-      std::format("Количество тестов: {}", state.CalculateRunsCount()).c_str());
+      std::format("Количество тестов: {}",
+                  Utils::CalculateRunsCount(state.minObjects, state.maxObjects))
+          .c_str());
 
   if (ImGui::Button("Начать тестирование"))
     Controllers::StartTestMemory();

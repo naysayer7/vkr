@@ -8,6 +8,7 @@
 #include "npy.hpp"
 #include "rtree.h"
 #include "state.hpp"
+#include "utils.hpp"
 
 namespace Controllers {
 
@@ -33,15 +34,10 @@ void TestKnnThreadTarget(AppState& state) {
     const auto& maxObjects = state.m_TestKnnState.setup.maxObjects;
 
     state.m_TestKnnState.progress.runsDone = 0;
-    state.m_TestKnnState.progress.runs = 0;
-    for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
-      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
-        state.m_TestKnnState.progress.runs++;
-      }
-    }
+    state.m_TestKnnState.progress.runs = Utils::CalculateRunsCount(state.m_TestKnnState.setup.minObjects, state.m_TestKnnState.setup.maxObjects);
 
     for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
-      for (int m = minObjects[0]; m <= std::min(minObjects[1], M / 2); ++m) {
+      for (int m = minObjects[0]; m <= std::min(minObjects[1], (M + 1) / 2); ++m) {
         state.m_RTreeParams.maxEntries = M;
         state.m_RTreeParams.minEntries = m;
         state.EnsureRTreeBuiltWithCurrentParameters();

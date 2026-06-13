@@ -44,46 +44,10 @@ void TestKnnSetup(TestKnnSetupState& state) {
   ImGui::InputInt("Количество эпох", &state.epochs);
   ImGui::InputInt("k для kNN", &state.k);
 
-  /* static ImGuiTableFlags flags =
-      ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
-      ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV |
-      ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-      ImGuiTableFlags_Hideable;
-  ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 8);
-  if (ImGui::BeginTable("table_params", 2, flags, outer_size)) {
-    ImGui::TableSetupScrollFreeze(0, 1);  // Первая строка всегда видна
-    ImGui::TableSetupColumn("min", ImGuiTableColumnFlags_None);
-    ImGui::TableSetupColumn("max", ImGuiTableColumnFlags_None);
-    ImGui::TableHeadersRow();
-
-    ImGuiListClipper clipper;
-    clipper.Begin((int)params.size());
-    while (clipper.Step()) {
-      for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        ImGui::Text(std::format("{}", params[row].minEntries).c_str(), 0, row);
-        ImGui::TableSetColumnIndex(1);
-        ImGui::Text(std::format("{}", params[row].maxEntries).c_str(), 1, row);
-      }
-    }
-    ImGui::EndTable();
-  }
-
-  ImGui::InputInt2("Параметры R-дерева", (int*)&state.paramsInput);
-  state.paramsInput[0] = std::max(state.paramsInput[0], 1);
-  state.paramsInput[1] = std::max(state.paramsInput[1], 2 *
-  state.paramsInput[0]);
-
-  if (ImGui::Button("+")) {
-    state.params.emplace_back(
-        RTreeParameters{state.paramsInput[0], state.paramsInput[1]});
-  } */
-
   ImGui::InputInt2("MIN", (int*)&state.minObjects);
   ImGui::InputInt2("MAX", (int*)&state.maxObjects);
   ImGui::Text(
-      std::format("Количество тестов: {}", state.CalculateRunsCount()).c_str());
+      std::format("Количество тестов: {}", Utils::CalculateRunsCount(state.minObjects, state.maxObjects)).c_str());
 
   if (ImGui::Button("Начать тестирование")) {
     Controllers::Evaluate();

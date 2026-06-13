@@ -28,21 +28,31 @@ struct Rectangle {
       : n(other.n), size(std::move(other.size)) {}
 
   Rectangle& operator=(const Rectangle& other) {
-    if (this != &other) {
-      for (std::size_t i = 0; i < n * 2; ++i)
-        size[i] = other.size[i];
-    }
+    if (this == &other)
+      return *this;
+
+    assert(n == other.n);
+
+    for (std::size_t i = 0; i < n * 2; ++i)
+      size[i] = other.size[i];
+
     return *this;
   }
 
   Rectangle& operator=(Rectangle&& other) noexcept {
+    if (this == &other)
+      return *this;
+      
+    assert(n == other.n);
+
     size = std::move(other.size);
+
     return *this;
   }
 
   void Zero() {
     for (std::size_t i = 0; i < n * 2; ++i)
-      size[i] = 0.0f;
+      size[i] = T{};
   }
 
   static Rectangle FromXYWH(T x, T y, T width, T height) {
@@ -189,10 +199,14 @@ class RTree {
       : maxObjectsPerNode(maxObjectsPerNode),
         minObjectsPerNode(minObjectsPerNode),
         n(n) {
-    if (minObjectsPerNode > maxObjectsPerNode / 2)
-      throw std::invalid_argument(
-          "minObjectsPerNode не должно превышать половины maxObjectsPerNode.");
+    if (!ValidateParameters(maxObjectsPerNode, minObjectsPerNode))
+      throw std::invalid_argument("Недопустимые параметры RTree.");
     root = std::make_unique<NodeType>(n);
+  }
+
+  static bool ValidateParameters(std::size_t maxObjectsPerNode,
+                                 std::size_t minObjectsPerNode) {
+    return minObjectsPerNode <= (maxObjectsPerNode + 1) / 2;
   }
 
   RTree(const RTree&) = delete;
@@ -204,6 +218,9 @@ class RTree {
   std::size_t GetMaxEntries() const { return maxObjectsPerNode; }
   std::size_t GetMinEntries() const { return minObjectsPerNode; }
 
+  /**
+   * ** Дерево не владеет объектами, поэтому объект должет жить не меньше дерева. **
+   */
   void Insert(const ObjectType* obj) {
     std::unique_lock lock(insertionMutex);
     NodeType* split = InsertRecursive(root.get(), obj);

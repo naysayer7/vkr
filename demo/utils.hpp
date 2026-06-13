@@ -1,7 +1,7 @@
 #pragma once
 #include <chrono>
-#include <string>
 #include <format>
+#include <string>
 
 namespace Utils {
 std::string FormatMemorySize(size_t bytes) {
@@ -27,5 +27,13 @@ std::string FormatDuration(const Measures::Duration& duration) {
 
 std::string FormatDuration(const double& duration) {
   return FormatDuration(Measures::Duration(duration));
+}
+
+int CalculateRunsCount(const int minObjects[2], const int maxObjects[2]) {
+  int runs = 0;
+  for (int M = maxObjects[0]; M <= maxObjects[1]; ++M)
+    for (int m = minObjects[0]; m <= std::min(minObjects[1], (M + 1) / 2); ++m)
+      runs++;
+  return runs;
 }
 }  // namespace Utils

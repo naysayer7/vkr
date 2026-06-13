@@ -6,6 +6,7 @@
 #include "npy.hpp"
 #include "rtree.h"
 #include "state.hpp"
+#include "utils.hpp"
 
 namespace Controllers {
 
@@ -30,14 +31,10 @@ void TestMemoryThreadTarget(AppState& state) {
     const auto& minO = setup.minObjects;
     const auto& maxO = setup.maxObjects;
 
-    int total = 0;
-    for (int M = maxO[0]; M <= maxO[1]; ++M)
-      for (int m = minO[0]; m <= std::min(minO[1], M / 2); ++m)
-        total++;
-    progress.total = total;
+    progress.total = Utils::CalculateRunsCount(minO, maxO);
 
     for (int M = maxO[0]; M <= maxO[1]; ++M) {
-      for (int m = minO[0]; m <= std::min(minO[1], M / 2); ++m) {
+      for (int m = minO[0]; m <= std::min(minO[1], (M + 1) / 2); ++m) {
         state.m_RTreeParams.maxEntries = M;
         state.m_RTreeParams.minEntries = m;
         progress.currentParams = RTreeParameters{m, M};

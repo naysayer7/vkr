@@ -48,7 +48,7 @@ void TestKSetup(TestKSetupState& state) {
   ImGui::InputInt("Эпох на измерение", &state.epochs);
 
   state.maxEntries = std::max(state.maxEntries, 2);
-  state.minEntries = std::max(1, std::min(state.minEntries, state.maxEntries / 2));
+  state.minEntries = std::max(1, std::min(state.minEntries, (state.maxEntries + 1) / 2));
   state.kMin       = std::max(state.kMin, 1);
   state.kMax       = std::max(state.kMax, state.kMin);
   state.kStep      = std::max(state.kStep, 1);

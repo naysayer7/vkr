@@ -32,7 +32,7 @@ void DemoSetup(bool& running, AppState& state) {
       std::max(state.m_RTreeParams.maxEntries, 2);
   state.m_RTreeParams.minEntries =
       std::max(1, std::min(state.m_RTreeParams.minEntries,
-                           state.m_RTreeParams.maxEntries / 2));
+                           (state.m_RTreeParams.maxEntries + 1) / 2));
 
   ImGui::Spacing();
 
