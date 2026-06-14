@@ -25,13 +25,15 @@ struct Rectangle {
   }
 
   Rectangle(Rectangle&& other) noexcept
-      : n(other.n), size(std::move(other.size)) {}
+      : size(std::move(other.size)), n(other.n) {
+    other.n = 0;
+  }
 
   Rectangle& operator=(const Rectangle& other) {
     if (this == &other)
       return *this;
 
-    if (n != other.n) {
+    if (n != other.n || !size) {
       size = std::make_unique<T[]>(other.n * 2);
       n = other.n;
     }
@@ -46,8 +48,9 @@ struct Rectangle {
     if (this == &other)
       return *this;
 
-    n = other.n;
     size = std::move(other.size);
+    n = other.n;
+    other.n = 0;
 
     return *this;
   }
@@ -217,8 +220,8 @@ class RTree {
   RTree(const RTree&) = delete;
   RTree& operator=(const RTree&) = delete;
 
-  RTree(RTree&&) noexcept = default;
-  RTree& operator=(RTree&&) noexcept = default;
+  RTree(RTree&&) noexcept = delete;
+  RTree& operator=(RTree&&) noexcept = delete;
 
   std::size_t GetMaxEntries() const { return maxObjectsPerNode; }
   std::size_t GetMinEntries() const { return minObjectsPerNode; }
