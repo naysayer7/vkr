@@ -7,12 +7,19 @@
 #include <queue>
 #include <shared_mutex>
 #include <stdexcept>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
 namespace rtree {
-template <typename T = float>
+template <typename T>
 struct Rectangle {
+  // Объём, расстояния и нормированное разделение в PickSeedsLinear считаются в
+  // вещественной арифметике; для целочисленного T деления и double-литералы
+  // вели бы себя неожиданно. Поэтому поддерживаются только float-типы.
+  static_assert(std::is_floating_point_v<T>,
+                "Rectangle<T>: T должен быть типом с плавающей точкой.");
+
   std::unique_ptr<T[]> size = nullptr;
   std::size_t n;
 
@@ -114,9 +121,9 @@ struct Rectangle {
           "Прямоугольники должны иметь одинаковое число "
           "измерений для вычисления расстояния.");
 
-    T dist = 0.0;
+    T dist{};
     for (std::size_t i = 0; i < n; ++i) {
-      T di = 0.0;
+      T di{};
       if (End(i) < other.size[i])
         di = other.size[i] - End(i);
       else if (other.End(i) < size[i])
@@ -309,7 +316,7 @@ class RTree {
     std::vector<const ObjectType*> result;
     result.reserve(k);
     std::priority_queue<QueueEntry> pq;
-    pq.push({0.0, this->root.get()});
+    pq.push({T{}, this->root.get()});
     while (!pq.empty() && result.size() < k) {
       auto [dist, entity] = pq.top();
       pq.pop();
