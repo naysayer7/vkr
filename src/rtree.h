@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <functional>
 #include <limits>
 #include <memory>
 #include <queue>
@@ -229,7 +228,7 @@ class RTree {
    * дерева. **
    */
   void Insert(const ObjectType* obj) {
-    std::unique_lock lock(mutex);
+    std::unique_lock lock(treeMutex);
     NodeType* split = InsertRecursive(root.get(), obj);
     if (split) {
       // split — сырой владеющий указатель; сразу берём владение, чтобы он не
@@ -244,8 +243,9 @@ class RTree {
     }
   }
 
-  void Dfs(const std::function<void(const NodeType*)>& func) const {
-    std::shared_lock lock(mutex);
+  template <typename Callback>
+  void Dfs(Callback&& callback) const {
+    std::shared_lock lock(treeMutex);
     if (!root)
       return;
     std::vector<const NodeType*> stack;
@@ -255,7 +255,7 @@ class RTree {
       const NodeType* current = stack.back();
       stack.pop_back();
 
-      func(current);
+      callback(current);
 
       for (const NodeType* child : current->children)
         stack.push_back(child);
@@ -275,10 +275,10 @@ class RTree {
 
   std::size_t GetN() const { return n; }
 
-  std::vector<const ObjectType*> Search(
-      const RectangleType& area,
-      const std::function<void(const NodeType*)>& callback) const {
-    std::shared_lock lock(mutex);
+  template <typename Callback>
+  std::vector<const ObjectType*> Search(const RectangleType& area,
+                                        Callback&& callback) const {
+    std::shared_lock lock(treeMutex);
     std::vector<const ObjectType*> result;
     this->SearchRecursive(root.get(), area, result, callback);
     return result;
@@ -301,7 +301,7 @@ class RTree {
       }
     };
 
-    std::shared_lock lock(mutex);
+    std::shared_lock lock(treeMutex);
 
     std::vector<const ObjectType*> result;
     result.reserve(k);
@@ -341,7 +341,7 @@ class RTree {
   std::size_t minObjectsPerNode;
   std::size_t n;
   std::unique_ptr<Node<T>> root;
-  mutable std::shared_mutex mutex;
+  mutable std::shared_mutex treeMutex;
 
   static double Enlargement(const RectangleType& current,
                             const RectangleType& added) {
@@ -641,10 +641,11 @@ class RTree {
     return sibling.release();
   }
 
+  template <typename Callback>
   void SearchRecursive(const NodeType* node,
                        const RectangleType& area,
                        std::vector<const ObjectType*>& results,
-                       const std::function<void(const NodeType*)>& callback) const {
+                       Callback& callback) const {
     if (!node)
       return;
     callback(node);
