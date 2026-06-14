@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -287,7 +288,16 @@ struct TestKnnState {
 class AppState {
   State m_currentState{State::MainMenu};
   std::size_t m_MemorySize{0};
+
+  mutable std::mutex m_RTreeMutex;
+  std::shared_ptr<rtree::RTree<float>> m_RTree;
+
   AppState() {}
+
+  void SetRTree(std::shared_ptr<rtree::RTree<float>> tree) {
+    std::lock_guard<std::mutex> lock(m_RTreeMutex);
+    m_RTree = std::move(tree);
+  }
 
  public:
   std::mutex m_Mutex;
@@ -296,7 +306,6 @@ class AppState {
   std::size_t m_ObjSize = 0;
 
   ImVec2 m_MouseWorldPos{0.0f, 0.0f};
-  std::unique_ptr<rtree::RTree<float>> m_RTree = nullptr;
   std::vector<rtree::Object<float>> m_Objects;
   BuildingRTreeState<float> m_BuildingRTreeState;
   DemoState m_DemoState;
@@ -306,10 +315,8 @@ class AppState {
   TestKState m_TestKState;
 
   void RecalculateMemorySize() {
-    if (m_RTree)
-      m_MemorySize = m_RTree->MemorySize();
-    else
-      m_MemorySize = 0;
+    const auto tree = GetRTree();
+    m_MemorySize = tree ? tree->MemorySize() : 0;
 
     m_ObjSize = 0;
     for (const auto& obj : m_Objects)
@@ -318,11 +325,18 @@ class AppState {
 
   std::size_t GetRTreeMemorySize() const { return m_MemorySize; }
 
+  // Потокобезопасный снимок текущего дерева. Возвращённый shared_ptr
+  // гарантирует, что дерево не будет уничтожено, пока им пользуется читатель.
+  std::shared_ptr<rtree::RTree<float>> GetRTree() const {
+    std::lock_guard<std::mutex> lock(m_RTreeMutex);
+    return m_RTree;
+  }
+
   size_t GetObjectsCount() const { return m_Objects.size(); }
 
   void SetStartFileReading() {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    m_RTree.reset();
+    SetRTree(nullptr);
     SetCurrentStateUnlocked(State::FileReading);
     m_Objects.clear();
     m_BuildingRTreeState.SetStart();
@@ -350,10 +364,11 @@ class AppState {
 
  public:
   bool IsRTreeBuiltWithCurrentParameters() const {
-    if (!m_RTree)
+    const auto tree = GetRTree();
+    if (!tree)
       return false;
-    return m_RTree->GetMaxEntries() == m_RTreeParams.maxEntries &&
-           m_RTree->GetMinEntries() == m_RTreeParams.minEntries;
+    return tree->GetMaxEntries() == m_RTreeParams.maxEntries &&
+           tree->GetMinEntries() == m_RTreeParams.minEntries;
   }
 
   void EnsureRTreeBuiltWithCurrentParameters() {
@@ -371,10 +386,6 @@ class AppState {
         "Building RTree with {} objects, parameters: maxEntries={}, "
         "minEntries={}",
         m_Objects.size(), m_RTreeParams.maxEntries, m_RTreeParams.minEntries);
-    if (m_RTree) {
-      std::println("RTree already exists, freeing...");
-      m_RTree.reset();
-    }
 
     std::println("Starting to build RTree...");
 
@@ -382,14 +393,15 @@ class AppState {
     m_BuildingRTreeState.handledObjects = 0;
     State prevState = GetCurrentState();
     SetCurrentStateUnlocked(State::BuildingRTree);
-    // Build the R-tree
-    m_RTree = std::make_unique<rtree::RTree<float>>(
+
+    auto tree = std::make_shared<rtree::RTree<float>>(
         m_RTreeParams.maxEntries, m_RTreeParams.minEntries,
-        m_Objects.empty() ? 2 : m_Objects[0].mbr.n);
+        m_Objects[0].mbr.n);
     for (const auto& obj : m_Objects) {
-      m_RTree->Insert(&obj);
+      tree->Insert(&obj);
       ++m_BuildingRTreeState.handledObjects;
     }
+    SetRTree(std::move(tree));
     std::println("RTree built successfully.");
     RecalculateMemorySize();
     SetCurrentStateUnlocked(prevState);

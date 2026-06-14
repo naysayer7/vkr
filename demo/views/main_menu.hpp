@@ -54,7 +54,7 @@ inline void MainMenu(bool& running, AppState& state) {
 
     ImGui::Separator();
     ImGui::Text("Объектов: %zu", state.GetObjectsCount());
-    if (state.m_RTree) {
+    if (state.GetRTree()) {
       ImGui::Text("Дерево: M=%d  m=%d  %.2f MB",
                   state.m_RTreeParams.maxEntries,
                   state.m_RTreeParams.minEntries,

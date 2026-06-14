@@ -82,10 +82,15 @@ inline void Viewport() {
   ImGui::PushClipRect(viewportMin, viewportMax, true);
   dl->AddRectFilled(viewportMin, viewportMax,
                     ImGui::GetColorU32(ImGuiCol_FrameBg));
-  renderer.Render(
-      {dl, viewportMin, viewportMax, camera, state.m_DemoState.showObjects,
-       state.m_DemoState.showMBRs, state.m_DemoState.showSearch, state.m_DemoState.showNodeIds, state.m_DemoState.kNN},
-      Scene{state.m_Objects, *state.m_RTree, state.m_MouseWorldPos});
+  // Снимок дерева удерживается живым до конца Render, даже если воркер-поток
+  // в это время перестроит дерево.
+  if (auto tree = state.GetRTree()) {
+    renderer.Render(
+        {dl, viewportMin, viewportMax, camera, state.m_DemoState.showObjects,
+         state.m_DemoState.showMBRs, state.m_DemoState.showSearch,
+         state.m_DemoState.showNodeIds, state.m_DemoState.kNN},
+        Scene{state.m_Objects, *tree, state.m_MouseWorldPos});
+  }
   ImGui::PopClipRect();
   ImGui::EndChild();
 }

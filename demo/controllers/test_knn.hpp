@@ -61,10 +61,10 @@ inline void TestKnnThreadTarget(AppState& state) {
 inline std::vector<double> TestKnn(AppState& state) {
   std::vector<double> times;
   times.reserve(state.m_TestKnnState.setup.epochs);
+  const auto tree = state.GetRTree();
   for (size_t i = 0; i < state.m_TestKnnState.setup.epochs; ++i) {
-    auto time = Measures::RunMeasure([&state]() -> void {
-      TestKnnEpoch(state.m_TestKnnState.setup.k, state.m_Objects,
-                   *state.m_RTree);
+    auto time = Measures::RunMeasure([&]() -> void {
+      TestKnnEpoch(state.m_TestKnnState.setup.k, state.m_Objects, *tree);
     });
     times.push_back(time.count());
     state.m_TestKnnState.progress.epochsDone++;
