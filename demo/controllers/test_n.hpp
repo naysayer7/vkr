@@ -101,9 +101,9 @@ inline void TestNThreadTarget(AppState& state) {
         progress.epochsDone++;
       }
 
-      const std::string filename =
-          resultsDir + "/" + std::to_string(n) + "_" + std::to_string(k) +
-          "_" + std::to_string(M) + "_" + std::to_string(m) + ".npy";
+      const std::string filename = resultsDir + "/" + std::to_string(n) + "_" +
+                                   std::to_string(k) + "_" + std::to_string(M) +
+                                   "_" + std::to_string(m) + ".npy";
       npy::npy_data_ptr<double> out{
           times.data(), {(npy::ndarray_len_t)times.size()}, false};
       std::printf("Saving %s\n", filename.c_str());

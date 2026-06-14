@@ -122,15 +122,19 @@ struct TestKSetupState {
   int epochs;
 
   void Reset() {
-    kMin = 1; kMax = 20; kStep = 1;
-    minEntries = 2; maxEntries = 4;
+    kMin = 1;
+    kMax = 20;
+    kStep = 1;
+    minEntries = 2;
+    maxEntries = 4;
     epochs = 10;
   }
 
   TestKSetupState() { Reset(); }
 
   int CalculateMeasurements() const {
-    if (kStep <= 0 || kMin > kMax) return 0;
+    if (kStep <= 0 || kMin > kMax)
+      return 0;
     return (kMax - kMin) / kStep + 1;
   }
 };
@@ -143,8 +147,10 @@ struct TestKProgressState {
   std::atomic<int> currentK;
 
   void Reset() {
-    done = 0; total = 0;
-    epochsDone = 0; epochs = 0;
+    done = 0;
+    total = 0;
+    epochsDone = 0;
+    epochs = 0;
     currentK = 0;
   }
 
@@ -299,6 +305,8 @@ class AppState {
     m_RTree = std::move(tree);
   }
 
+  void SetCurrentStateUnlocked(State newState) { m_currentState = newState; }
+
  public:
   std::mutex m_Mutex;
   RTreeParameters m_RTreeParams;
@@ -325,8 +333,6 @@ class AppState {
 
   std::size_t GetRTreeMemorySize() const { return m_MemorySize; }
 
-  // Потокобезопасный снимок текущего дерева. Возвращённый shared_ptr
-  // гарантирует, что дерево не будет уничтожено, пока им пользуется читатель.
   std::shared_ptr<rtree::RTree<float>> GetRTree() const {
     std::lock_guard<std::mutex> lock(m_RTreeMutex);
     return m_RTree;
@@ -358,9 +364,6 @@ class AppState {
       return false;
     return true;
   }
-
- private:
-  void SetCurrentStateUnlocked(State newState) { m_currentState = newState; }
 
  public:
   bool IsRTreeBuiltWithCurrentParameters() const {
@@ -395,8 +398,7 @@ class AppState {
     SetCurrentStateUnlocked(State::BuildingRTree);
 
     auto tree = std::make_shared<rtree::RTree<float>>(
-        m_RTreeParams.maxEntries, m_RTreeParams.minEntries,
-        m_Objects[0].mbr.n);
+        m_RTreeParams.maxEntries, m_RTreeParams.minEntries, m_Objects[0].mbr.n);
     for (const auto& obj : m_Objects) {
       tree->Insert(&obj);
       ++m_BuildingRTreeState.handledObjects;

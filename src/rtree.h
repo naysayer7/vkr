@@ -8,8 +8,9 @@
 #include <queue>
 #include <shared_mutex>
 #include <stdexcept>
-#include <vector>
 #include <variant>
+#include <vector>
+
 
 namespace rtree {
 template <typename T = float>
@@ -226,7 +227,8 @@ class RTree {
   std::size_t GetMinEntries() const { return minObjectsPerNode; }
 
   /**
-   * ** Дерево не владеет объектами, поэтому объект должет жить не меньше дерева. **
+   * ** Дерево не владеет объектами, поэтому объект должет жить не меньше
+   * дерева. **
    */
   void Insert(const ObjectType* obj) {
     std::unique_lock lock(insertionMutex);
@@ -291,7 +293,7 @@ class RTree {
                                      std::size_t k) const {
     struct QueueEntry {
       T dist;
-      std::variant<const NodeType*, const ObjectType*> entity; 
+      std::variant<const NodeType*, const ObjectType*> entity;
 
       bool operator<(const QueueEntry& other) const {
         return dist > other.dist;  // Меньше - выше приоритет
@@ -330,7 +332,7 @@ class RTree {
   }
 
   ~RTree() {
-    // root and all children are freed automatically.
+    // Дерево освобождается автоматически, но не объекты
   }
 
  private:
@@ -648,7 +650,7 @@ class RTree {
   void SearchRecursive(const NodeType* node,
                        const RectangleType& area,
                        std::vector<const ObjectType*>& results,
-                       std::function<void(const NodeType*)> &callback) const {
+                       std::function<void(const NodeType*)>& callback) const {
     if (!node)
       return;
     callback(node);

@@ -34,10 +34,13 @@ inline void TestKnnThreadTarget(AppState& state) {
     const auto& maxObjects = state.m_TestKnnState.setup.maxObjects;
 
     state.m_TestKnnState.progress.runsDone = 0;
-    state.m_TestKnnState.progress.runs = Utils::CalculateRunsCount(state.m_TestKnnState.setup.minObjects, state.m_TestKnnState.setup.maxObjects);
+    state.m_TestKnnState.progress.runs =
+        Utils::CalculateRunsCount(state.m_TestKnnState.setup.minObjects,
+                                  state.m_TestKnnState.setup.maxObjects);
 
     for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
-      for (int m = minObjects[0]; m <= std::min(minObjects[1], (M + 1) / 2); ++m) {
+      for (int m = minObjects[0]; m <= std::min(minObjects[1], (M + 1) / 2);
+           ++m) {
         state.m_RTreeParams.maxEntries = M;
         state.m_RTreeParams.minEntries = m;
         state.EnsureRTreeBuiltWithCurrentParameters();
@@ -73,16 +76,17 @@ inline std::vector<double> TestKnn(AppState& state) {
 }
 
 inline void TestKnnEpoch(const int& k,
-                  const std::vector<rtree::Object<float>>& objects,
-                  const rtree::RTree<float>& rtree) {
+                         const std::vector<rtree::Object<float>>& objects,
+                         const rtree::RTree<float>& rtree) {
   for (const auto& obj : objects) {
     rtree.kNN(obj.mbr, k);
   }
 }
 
 inline void SaveTestKnnResults(const AppState& state) {
-  const std::string resultsDir =
-      std::filesystem::current_path().string() + "/results/knn/" + std::to_string(std::time(nullptr));
+  const std::string resultsDir = std::filesystem::current_path().string() +
+                                 "/results/knn/" +
+                                 std::to_string(std::time(nullptr));
   if (!std::filesystem::exists(resultsDir)) {
     std::filesystem::create_directory(resultsDir);
   }

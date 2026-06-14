@@ -55,7 +55,8 @@ inline void TestMemoryThreadTarget(AppState& state) {
 
     const std::string filename =
         resultsDir + "/" + std::to_string(std::time(nullptr)) + "_" +
-        std::to_string(state.GetObjectsCount()) + "_" + std::to_string(state.GetRTree()->GetN()) + ".npy";
+        std::to_string(state.GetObjectsCount()) + "_" +
+        std::to_string(state.GetRTree()->GetN()) + ".npy";
     result.savedFilename = filename;
 
     const std::size_t rows = result.memorySizes.size();

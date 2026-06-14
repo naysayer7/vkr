@@ -47,7 +47,9 @@ inline void TestKnnSetup(TestKnnSetupState& state) {
   ImGui::InputInt2("MIN", (int*)&state.minObjects);
   ImGui::InputInt2("MAX", (int*)&state.maxObjects);
   ImGui::Text(
-      std::format("Количество тестов: {}", Utils::CalculateRunsCount(state.minObjects, state.maxObjects)).c_str());
+      std::format("Количество тестов: {}",
+                  Utils::CalculateRunsCount(state.minObjects, state.maxObjects))
+          .c_str());
 
   if (ImGui::Button("Начать тестирование")) {
     Controllers::Evaluate();
@@ -66,16 +68,14 @@ inline void TestKnnProgress(TestKnnProgressState& state) {
     return;
   }
 
-  ImGui::ProgressBar(
-      (float)runsDone / (float)runs, ImVec2(0.0f, 0.0f),
-      std::format("Тестирование {}/{}", runsDone, runs).c_str());
+  ImGui::ProgressBar((float)runsDone / (float)runs, ImVec2(0.0f, 0.0f),
+                     std::format("Тестирование {}/{}", runsDone, runs).c_str());
 
   ImGui::Text(std::format("m: {}", params.minEntries).c_str());
   ImGui::Text(std::format("M: {}", params.maxEntries).c_str());
 
-  ImGui::ProgressBar(
-      (float)epochsDone / (float)epochs, ImVec2(0.0f, 0.0f),
-      std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
+  ImGui::ProgressBar((float)epochsDone / (float)epochs, ImVec2(0.0f, 0.0f),
+                     std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
 inline void TestKnnResults(TestKnnResultState& state) {

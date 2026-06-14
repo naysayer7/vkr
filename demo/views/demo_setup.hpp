@@ -28,8 +28,7 @@ inline void DemoSetup(bool& running, AppState& state) {
   ImGui::InputInt("M (maxEntries)", &state.m_RTreeParams.maxEntries);
   ImGui::InputInt("m (minEntries)", &state.m_RTreeParams.minEntries);
 
-  state.m_RTreeParams.maxEntries =
-      std::max(state.m_RTreeParams.maxEntries, 2);
+  state.m_RTreeParams.maxEntries = std::max(state.m_RTreeParams.maxEntries, 2);
   state.m_RTreeParams.minEntries =
       std::max(1, std::min(state.m_RTreeParams.minEntries,
                            (state.m_RTreeParams.maxEntries + 1) / 2));

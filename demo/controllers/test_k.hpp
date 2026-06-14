@@ -40,8 +40,9 @@ inline void TestKThreadTarget(AppState& state) {
     progress.total = measurements;
     progress.epochs = setup.epochs;
 
-    const std::string resultsDir =
-        std::filesystem::current_path().string() + "/results/k/" + std::to_string(std::time(nullptr));
+    const std::string resultsDir = std::filesystem::current_path().string() +
+                                   "/results/k/" +
+                                   std::to_string(std::time(nullptr));
     std::filesystem::create_directories(resultsDir);
 
     // Дерево строится один раз — k не влияет на структуру дерева.
@@ -65,9 +66,10 @@ inline void TestKThreadTarget(AppState& state) {
         progress.epochsDone++;
       }
 
-      const std::string filename = resultsDir + "/" + std::to_string(state.m_Objects.size()) + "_" + std::to_string(k) + "_" +
-                                   std::to_string(M) + "_" +
-                                   std::to_string(m) + ".npy";
+      const std::string filename =
+          resultsDir + "/" + std::to_string(state.m_Objects.size()) + "_" +
+          std::to_string(k) + "_" + std::to_string(M) + "_" +
+          std::to_string(m) + ".npy";
       npy::npy_data_ptr<double> data{
           times.data(), {(npy::ndarray_len_t)times.size()}, false};
       std::printf("Saving %s\n", filename.c_str());

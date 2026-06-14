@@ -22,8 +22,8 @@ inline void Viewport() {
   if (state.GetObjectsCount() > 0)
     ImGui::Text("Память на объект: %s",
                 Utils::FormatMemorySize(static_cast<unsigned int>(
-                                     (double)state.GetRTreeMemorySize() /
-                                     state.GetObjectsCount()))
+                                            (double)state.GetRTreeMemorySize() /
+                                            state.GetObjectsCount()))
                     .c_str());
   else
     ImGui::Text("Память на объект: 0 B");
