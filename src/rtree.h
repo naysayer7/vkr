@@ -47,11 +47,7 @@ struct Rectangle {
     if (this == &other)
       return *this;
 
-    if (n != other.n) {
-      size = std::make_unique<T[]>(other.n * 2);
-      n = other.n;
-    }
-
+    n = other.n;
     size = std::move(other.size);
 
     return *this;
@@ -193,6 +189,9 @@ struct Node {
   }
 };
 
+/**
+ * RTree. Операции удаления нет так как в демонстрации не требуется
+ */
 template <typename T>
 class RTree {
  public:
@@ -230,20 +229,23 @@ class RTree {
    * дерева. **
    */
   void Insert(const ObjectType* obj) {
-    std::unique_lock lock(insertionMutex);
+    std::unique_lock lock(mutex);
     NodeType* split = InsertRecursive(root.get(), obj);
     if (split) {
-      NodeType* oldRoot = root.release();
+      // split — сырой владеющий указатель; сразу берём владение, чтобы он не
+      // утёк, если что-то бросит до его привязки к новому корню.
+      std::unique_ptr<NodeType> splitOwner(split);
       auto newRoot = std::make_unique<NodeType>(n);
-      newRoot->children.push_back(oldRoot);
-      newRoot->children.push_back(split);
+      newRoot->children.reserve(2);
+      newRoot->children.push_back(root.release());
+      newRoot->children.push_back(splitOwner.release());
       RecomputeMBR(newRoot.get());
       root = std::move(newRoot);
     }
   }
 
-  void Dfs(std::function<void(const NodeType*)> func) const {
-    std::shared_lock lock(insertionMutex);
+  void Dfs(const std::function<void(const NodeType*)>& func) const {
+    std::shared_lock lock(mutex);
     if (!root)
       return;
     std::vector<const NodeType*> stack;
@@ -275,8 +277,8 @@ class RTree {
 
   std::vector<const ObjectType*> Search(
       const RectangleType& area,
-      std::function<void(const NodeType*)> callback) const {
-    std::shared_lock lock(insertionMutex);
+      const std::function<void(const NodeType*)>& callback) const {
+    std::shared_lock lock(mutex);
     std::vector<const ObjectType*> result;
     this->SearchRecursive(root.get(), area, result, callback);
     return result;
@@ -299,7 +301,7 @@ class RTree {
       }
     };
 
-    std::shared_lock lock(insertionMutex);
+    std::shared_lock lock(mutex);
 
     std::vector<const ObjectType*> result;
     result.reserve(k);
@@ -339,7 +341,7 @@ class RTree {
   std::size_t minObjectsPerNode;
   std::size_t n;
   std::unique_ptr<Node<T>> root;
-  mutable std::shared_mutex insertionMutex;
+  mutable std::shared_mutex mutex;
 
   static double Enlargement(const RectangleType& current,
                             const RectangleType& added) {
@@ -609,47 +611,40 @@ class RTree {
   }
 
   NodeType* SplitLeaf(NodeType* node) {
-    NodeType* sibling = new NodeType(n);
-
-    std::vector<const ObjectType*> entries;
-    entries.swap(node->objects);
-
     auto split = SplitEntries(
-        entries,
+        node->objects,
         [](const ObjectType* o) -> const RectangleType& { return o->mbr; });
 
+    auto sibling = std::make_unique<NodeType>(n);
+
+    // Дальше только перемещения и clear — без исключений.
     node->objects = std::move(split.groupA);
     sibling->objects = std::move(split.groupB);
     node->children.clear();
-    sibling->children.clear();
     node->mbr = std::move(split.mbrA);
     sibling->mbr = std::move(split.mbrB);
-    return sibling;
+    return sibling.release();
   }
 
   NodeType* SplitInternal(NodeType* node) {
-    NodeType* sibling = new NodeType(n);
-
-    std::vector<NodeType*> entries;
-    entries.swap(node->children);
-
     auto split = SplitEntries(
-        entries,
+        node->children,
         [](const NodeType* nd) -> const RectangleType& { return nd->mbr; });
+
+    auto sibling = std::make_unique<NodeType>(n);
 
     node->children = std::move(split.groupA);
     sibling->children = std::move(split.groupB);
     node->objects.clear();
-    sibling->objects.clear();
     node->mbr = std::move(split.mbrA);
     sibling->mbr = std::move(split.mbrB);
-    return sibling;
+    return sibling.release();
   }
 
   void SearchRecursive(const NodeType* node,
                        const RectangleType& area,
                        std::vector<const ObjectType*>& results,
-                       std::function<void(const NodeType*)>& callback) const {
+                       const std::function<void(const NodeType*)>& callback) const {
     if (!node)
       return;
     callback(node);
