@@ -11,7 +11,6 @@
 #include <variant>
 #include <vector>
 
-
 namespace rtree {
 template <typename T = float>
 struct Rectangle {
@@ -179,8 +178,8 @@ struct Node {
   std::size_t MemorySize() const {
     std::size_t size =
         sizeof(*this) +
-        mbr.BufferMemorySize();  // Вычитаем размер пустого mbr, так как он уже
-                                 // учтен в sizeof(*this)
+        mbr.BufferMemorySize();  // Размер самого узла и его MBR. Объекты и дети
+                                 // учитываются ниже
 
     if (objects.empty() && children.empty())
       return size;
