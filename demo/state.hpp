@@ -388,12 +388,12 @@ class AppState {
         "minEntries={}",
         m_Objects.size(), m_RTreeParams.maxEntries, m_RTreeParams.minEntries);
 
-    std::println("Starting to build RTree...");
-
     m_BuildingRTreeState.totalObjects = m_Objects.size();
     m_BuildingRTreeState.handledObjects = 0;
     State prevState = GetCurrentState();
     SetCurrentStateUnlocked(State::BuildingRTree);
+
+    std::println("Starting to build RTree...");
 
     auto tree = std::make_shared<rtree::RTree<double>>(
         m_RTreeParams.maxEntries, m_RTreeParams.minEntries, m_Objects[0].mbr.n);

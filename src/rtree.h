@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <queue>
 #include <shared_mutex>
 #include <stdexcept>
@@ -140,6 +141,11 @@ struct Rectangle {
     return size[axis] + size[axis + n];
   }
 
+  /** Центр MBR вдоль оси axis (нижняя граница + половина протяжённости). */
+  T Center(std::size_t axis) const {
+    return size[axis] + size[axis + n] / T{2};
+  }
+
   std::size_t MemorySize() const { return sizeof(*this) + BufferMemorySize(); }
 
   std::size_t BufferMemorySize() const { return n * 2 * sizeof(T); }
@@ -251,6 +257,68 @@ class RTree {
       RecomputeMBR(newRoot.get());
       root = std::move(newRoot);
     }
+  }
+
+  /**
+   * Пакетная загрузка методом STR (Sort-Tile-Recursive).
+   *
+   * STR: A Simple and Efficient Algorithm for R-Tree Packing
+   * https://www.researchgate.net/publication/3686660_STR_A_Simple_and_Efficient_Algorithm_for_R-Tree_Packing
+   *
+   * ** Дерево не владеет объектами, поэтому каждый объект должен жить не меньше
+   * дерева. **
+   */
+  void BulkLoad(std::vector<const ObjectType*> objs) {
+    std::unique_lock lock(treeMutex);
+
+    if (objs.empty()) {
+      root = std::make_unique<NodeType>(n);
+      return;
+    }
+
+    // Фаза 1: упаковываем объекты в листья по maxObjectsPerNode штук.
+    std::vector<std::size_t> indices(objs.size());
+    std::iota(indices.begin(), indices.end(), std::size_t{0});
+    auto buckets = STRTile(std::move(indices), maxObjectsPerNode,
+                           [&](std::size_t i, std::size_t axis) {
+                             return objs[i]->mbr.Center(axis);
+                           });
+
+    std::vector<NodeType*> level;
+    level.reserve(buckets.size());
+    for (const auto& bucket : buckets) {
+      auto* leaf = new NodeType(n);
+      leaf->objects.reserve(bucket.size());
+      for (std::size_t i : bucket)
+        leaf->objects.push_back(objs[i]);
+      RecomputeMBR(leaf);
+      level.push_back(leaf);
+    }
+
+    // Фаза 2: упаковываем узлы уровня в родителей, пока не останется один
+    // корень.
+    while (level.size() > 1) {
+      std::vector<std::size_t> lvlIndices(level.size());
+      std::iota(lvlIndices.begin(), lvlIndices.end(), std::size_t{0});
+      auto parentBuckets = STRTile(std::move(lvlIndices), maxObjectsPerNode,
+                                   [&](std::size_t i, std::size_t axis) {
+                                     return level[i]->mbr.Center(axis);
+                                   });
+
+      std::vector<NodeType*> parents;
+      parents.reserve(parentBuckets.size());
+      for (const auto& bucket : parentBuckets) {
+        auto* parent = new NodeType(n);
+        parent->children.reserve(bucket.size());
+        for (std::size_t i : bucket)
+          parent->children.push_back(level[i]);
+        RecomputeMBR(parent);
+        parents.push_back(parent);
+      }
+      level = std::move(parents);
+    }
+
+    root.reset(level.front());
   }
 
   template <typename Callback>
@@ -387,6 +455,66 @@ class RTree {
       } else {
         node->mbr.Unite(obj->mbr);
       }
+    }
+  }
+
+  /**
+   * Группирует индексы записей в корзины размером не больше capacity методом
+   * STR: на каждом измерении сортирует по центру MBR и режет на «плиты», затем
+   * рекурсивно тайлит каждую плиту по следующему измерению. На последнем
+   * измерении просто нарезает на группы по capacity.
+   */
+  template <typename CenterFn>
+  std::vector<std::vector<std::size_t>> STRTile(
+      std::vector<std::size_t> indices,
+      std::size_t capacity,
+      CenterFn center) const {
+    std::vector<std::vector<std::size_t>> buckets;
+    STRTileRecursive(std::move(indices), 0, capacity, center, buckets);
+    return buckets;
+  }
+
+  template <typename CenterFn>
+  void STRTileRecursive(std::vector<std::size_t> indices,
+                        std::size_t dim,
+                        std::size_t capacity,
+                        CenterFn center,
+                        std::vector<std::vector<std::size_t>>& out) const {
+    const std::size_t count = indices.size();
+    if (count <= capacity) {
+      out.push_back(std::move(indices));
+      return;
+    }
+
+    std::sort(indices.begin(), indices.end(),
+              [&](std::size_t a, std::size_t b) {
+                return center(a, dim) < center(b, dim);
+              });
+
+    // Число узлов, которые предстоит сформировать из этих записей.
+    const std::size_t nodes = (count + capacity - 1) / capacity;
+    const std::size_t dimsRemaining = n - dim;
+
+    // Последнее измерение: режем на группы ровно по capacity.
+    if (dimsRemaining <= 1) {
+      for (std::size_t i = 0; i < count; i += capacity) {
+        const std::size_t end = std::min(count, i + capacity);
+        out.emplace_back(indices.begin() + i, indices.begin() + end);
+      }
+      return;
+    }
+
+    // Число плит вдоль текущей оси и размер плиты (в записях).
+    const std::size_t slabs = static_cast<std::size_t>(
+        std::ceil(std::pow(static_cast<double>(nodes), 1.0 / dimsRemaining)));
+    const std::size_t nodesPerSlab = (nodes + slabs - 1) / slabs;
+    const std::size_t itemsPerSlab = nodesPerSlab * capacity;
+
+    for (std::size_t i = 0; i < count; i += itemsPerSlab) {
+      const std::size_t end = std::min(count, i + itemsPerSlab);
+      STRTileRecursive(
+          std::vector<std::size_t>(indices.begin() + i, indices.begin() + end),
+          dim + 1, capacity, center, out);
     }
   }
 

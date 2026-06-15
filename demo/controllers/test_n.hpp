@@ -87,8 +87,11 @@ inline void TestNThreadTarget(AppState& state) {
       progress.epochsDone = 0;
 
       auto tree = std::make_unique<rtree::RTree<float>>(M, m, dims);
+      std::vector<const rtree::Object<float>*> objectPtrs;
+      objectPtrs.reserve(objects.size());
       for (const auto& obj : objects)
-        tree->Insert(&obj);
+        objectPtrs.push_back(&obj);
+      tree->BulkLoad(std::move(objectPtrs));
 
       std::vector<double> times;
       times.reserve(setup.epochs);
