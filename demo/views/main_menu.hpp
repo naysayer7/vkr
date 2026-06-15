@@ -6,22 +6,16 @@
 namespace Views {
 
 inline void MainMenu(bool& running, AppState& state) {
+#ifndef NDEBUG
   if (ImGui::BeginMainMenuBar()) {
-    /* if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Load npy file"))
-        Controllers::LoadNpyFile();
-      if (ImGui::MenuItem("Exit"))
-        running = false;
-      ImGui::EndMenu();
-    } */
     if (ImGui::BeginMenu("Window")) {
       ImGui::MenuItem("ImGui Demo", nullptr, &state.m_ShowImGuiDemo);
       ImGui::EndMenu();
     }
     ImGui::EndMainMenuBar();
   }
+#endif
 
-  // Fullscreen host window
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
@@ -30,15 +24,12 @@ inline void MainMenu(bool& running, AppState& state) {
       "Main window", nullptr,
       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-  ImGui::Text("Main menu");
-  ImGui::Separator();
-
-  if (ImGui::Button("Load NPY file")) {
+  if (ImGui::Button("Загрузить NPY файл")) {
     Controllers::LoadNpyFile();
   }
 
   ImGui::BeginDisabled(!state.IsDemoAvaliable());
-  if (ImGui::Button("Demo"))
+  if (ImGui::Button("Демонстрация"))
     state.SetCurrentState(State::DemoSetup);
   ImGui::EndDisabled();
 
@@ -55,8 +46,7 @@ inline void MainMenu(bool& running, AppState& state) {
     ImGui::Separator();
     ImGui::Text("Объектов: %zu", state.GetObjectsCount());
     if (state.GetRTree()) {
-      ImGui::Text("Дерево: M=%d  m=%d  %.2f MB",
-                  state.m_RTreeParams.maxEntries,
+      ImGui::Text("Дерево: M=%d  m=%d  %.2f MB", state.m_RTreeParams.maxEntries,
                   state.m_RTreeParams.minEntries,
                   state.GetRTreeMemorySize() / (1024.0f * 1024.0f));
     }

@@ -8,23 +8,6 @@
 namespace Views {
 
 inline void Demo(bool& running, AppState& state) {
-  // Main menu
-  if (ImGui::BeginMainMenuBar()) {
-    if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Load npy file"))
-        Controllers::LoadNpyFile();
-      if (ImGui::MenuItem("Exit"))
-        running = false;
-      ImGui::EndMenu();
-    }
-    if (ImGui::BeginMenu("Window")) {
-      ImGui::MenuItem("ImGui Demo", nullptr, &state.m_ShowImGuiDemo);
-      ImGui::EndMenu();
-    }
-    ImGui::EndMainMenuBar();
-  }
-
-  // Fullscreen host window
   const ImGuiViewport* vp = ImGui::GetMainViewport();
   ImGui::SetNextWindowPos(vp->WorkPos);
   ImGui::SetNextWindowSize(vp->WorkSize);
