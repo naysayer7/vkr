@@ -48,8 +48,11 @@ inline void TestKThreadTarget(AppState& state) {
     // Дерево строится один раз — k не влияет на структуру дерева.
     const std::size_t dims = state.m_Objects[0].mbr.n;
     auto tree = std::make_unique<rtree::RTree<double>>(M, m, dims);
+    std::vector<const rtree::Object<double>*> objectPtrs;
+    objectPtrs.reserve(state.m_Objects.size());
     for (const auto& obj : state.m_Objects)
-      tree->Insert(&obj);
+      objectPtrs.push_back(&obj);
+    tree->BulkLoad(std::move(objectPtrs));
 
     for (int k = setup.kMin; k <= setup.kMax; k += setup.kStep) {
       progress.currentK = k;

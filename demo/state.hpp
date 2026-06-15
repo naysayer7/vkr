@@ -378,7 +378,7 @@ class AppState {
     BuildRTree();
   }
 
-  void BuildRTree() {
+  void BuildRTree(bool bulkLoad = true) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     if (m_Objects.empty())
       throw std::runtime_error(
@@ -397,9 +397,18 @@ class AppState {
 
     auto tree = std::make_shared<rtree::RTree<double>>(
         m_RTreeParams.maxEntries, m_RTreeParams.minEntries, m_Objects[0].mbr.n);
-    for (const auto& obj : m_Objects) {
-      tree->Insert(&obj);
-      ++m_BuildingRTreeState.handledObjects;
+    if (bulkLoad) {
+      std::vector<const rtree::Object<double>*> objectPtrs;
+      objectPtrs.reserve(m_Objects.size());
+      for (const auto& obj : m_Objects)
+        objectPtrs.push_back(&obj);
+      tree->BulkLoad(std::move(objectPtrs));
+      m_BuildingRTreeState.handledObjects = m_Objects.size();
+    } else {
+      for (const auto& obj : m_Objects) {
+        tree->Insert(&obj);
+        ++m_BuildingRTreeState.handledObjects;
+      }
     }
     SetRTree(std::move(tree));
     std::println("RTree built successfully.");
