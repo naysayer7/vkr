@@ -33,17 +33,21 @@ inline void MainMenu(bool& running, AppState& state) {
     state.SetCurrentState(State::DemoSetup);
   ImGui::EndDisabled();
 
-  if (!state.m_Objects.empty()) {
-    if (ImGui::Button("Тестирование KNN"))
-      state.SetCurrentState(State::TestKnn);
-    if (ImGui::Button("Тестирование использования памяти"))
-      state.SetCurrentState(State::TestMemory);
-    if (ImGui::Button("Тестирование KNN по N объектов"))
-      state.SetCurrentState(State::TestN);
-    if (ImGui::Button("Тестирование KNN по k"))
-      state.SetCurrentState(State::TestK);
+  ImGui::BeginDisabled(state.m_Objects.empty());
+  if (ImGui::Button("Тестирование KNN"))
+    state.SetCurrentState(State::TestKnn);
+  if (ImGui::Button("Тестирование использования памяти"))
+    state.SetCurrentState(State::TestMemory);
+  if (ImGui::Button("Тестирование KNN по N объектов"))
+    state.SetCurrentState(State::TestN);
+  if (ImGui::Button("Тестирование KNN по k"))
+    state.SetCurrentState(State::TestK);
 
-    ImGui::Separator();
+  ImGui::Separator();
+  if (state.m_Objects.empty()) {
+    ImGui::Text(
+        "Загрузите NPY файл, чтобы начать демонстрацию и тестирование.");
+  } else {
     ImGui::Text("Объектов: %zu", state.GetObjectsCount());
     if (state.GetRTree()) {
       ImGui::Text("Дерево: M=%d  m=%d  %.2f MB", state.m_RTreeParams.maxEntries,
@@ -51,6 +55,8 @@ inline void MainMenu(bool& running, AppState& state) {
                   state.GetRTreeMemorySize() / (1024.0f * 1024.0f));
     }
   }
+  ImGui::EndDisabled();
+
   ImGui::End();
 }
 
