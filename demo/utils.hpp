@@ -37,4 +37,48 @@ inline int CalculateRunsCount(const int minObjects[2],
       runs++;
   return runs;
 }
+
+class IndexIterator {
+ public:
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = int64_t;
+  using difference_type = int64_t;
+  using pointer = const int64_t*;
+  using reference = const int64_t&;
+
+  IndexIterator() = default;
+  explicit IndexIterator(value_type index) : index_(index) {}
+
+  reference operator*() const { return index_; }
+  pointer operator->() const { return &index_; }
+
+  IndexIterator& operator++() { ++index_; return *this; }
+  IndexIterator operator++(int) { IndexIterator tmp = *this; ++index_; return tmp; }
+  IndexIterator& operator--() { --index_; return *this; }
+  IndexIterator operator--(int) { IndexIterator tmp = *this; --index_; return tmp; }
+
+  IndexIterator& operator+=(difference_type n) { index_ += n; return *this; }
+  IndexIterator& operator-=(difference_type n) { index_ -= n; return *this; }
+
+  IndexIterator operator+(difference_type n) const { return IndexIterator(index_ + n); }
+  IndexIterator operator-(difference_type n) const { return IndexIterator(index_ - n); }
+  difference_type operator-(const IndexIterator& other) const { return index_ - other.index_; }
+
+  value_type operator[](difference_type n) const { return index_ + n; }
+
+  bool operator==(const IndexIterator& other) const { return index_ == other.index_; }
+  bool operator!=(const IndexIterator& other) const { return index_ != other.index_; }
+  bool operator<(const IndexIterator& other) const { return index_ < other.index_; }
+  bool operator>(const IndexIterator& other) const { return index_ > other.index_; }
+  bool operator<=(const IndexIterator& other) const { return index_ <= other.index_; }
+  bool operator>=(const IndexIterator& other) const { return index_ >= other.index_; }
+
+  friend IndexIterator operator+(difference_type n, const IndexIterator& it) {
+    return IndexIterator(n + it.index_);
+  }
+
+ private:
+  value_type index_{0};
+};
+
 }  // namespace Utils

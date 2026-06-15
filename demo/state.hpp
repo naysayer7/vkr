@@ -21,7 +21,6 @@ enum class State {
   TestK,          // Тестирование KNN по параметру k
 };
 
-template <typename T>
 struct BuildingRTreeState {
   std::size_t totalObjects{0};
   std::size_t handledObjects{0};
@@ -41,7 +40,7 @@ struct BuildingRTreeState {
 
 struct DemoState {
   Camera2D camera;
-  DefaultRenderer renderer;
+  DefaultRenderer<double> renderer;
   bool showObjects = true;
   bool showMBRs = false;
   bool showSearch = false;
@@ -296,11 +295,11 @@ class AppState {
   std::size_t m_MemorySize{0};
 
   mutable std::mutex m_RTreeMutex;
-  std::shared_ptr<rtree::RTree<float>> m_RTree;
+  std::shared_ptr<rtree::RTree<double>> m_RTree;
 
   AppState() {}
 
-  void SetRTree(std::shared_ptr<rtree::RTree<float>> tree) {
+  void SetRTree(std::shared_ptr<rtree::RTree<double>> tree) {
     std::lock_guard<std::mutex> lock(m_RTreeMutex);
     m_RTree = std::move(tree);
   }
@@ -314,8 +313,8 @@ class AppState {
   std::size_t m_ObjSize = 0;
 
   ImVec2 m_MouseWorldPos{0.0f, 0.0f};
-  std::vector<rtree::Object<float>> m_Objects;
-  BuildingRTreeState<float> m_BuildingRTreeState;
+  std::vector<rtree::Object<double>> m_Objects;
+  BuildingRTreeState m_BuildingRTreeState;
   DemoState m_DemoState;
   TestKnnState m_TestKnnState;
   TestMemoryState m_TestMemoryState;
@@ -333,7 +332,7 @@ class AppState {
 
   std::size_t GetRTreeMemorySize() const { return m_MemorySize; }
 
-  std::shared_ptr<rtree::RTree<float>> GetRTree() const {
+  std::shared_ptr<rtree::RTree<double>> GetRTree() const {
     std::lock_guard<std::mutex> lock(m_RTreeMutex);
     return m_RTree;
   }
@@ -365,7 +364,6 @@ class AppState {
     return true;
   }
 
- public:
   bool IsRTreeBuiltWithCurrentParameters() const {
     const auto tree = GetRTree();
     if (!tree)
@@ -397,7 +395,7 @@ class AppState {
     State prevState = GetCurrentState();
     SetCurrentStateUnlocked(State::BuildingRTree);
 
-    auto tree = std::make_shared<rtree::RTree<float>>(
+    auto tree = std::make_shared<rtree::RTree<double>>(
         m_RTreeParams.maxEntries, m_RTreeParams.minEntries, m_Objects[0].mbr.n);
     for (const auto& obj : m_Objects) {
       tree->Insert(&obj);

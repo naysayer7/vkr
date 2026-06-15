@@ -20,9 +20,10 @@ struct RenderContext {
   int kNN;
 };
 
+template <typename T>
 struct Scene {
-  const std::vector<rtree::Object<float>>& objects;
-  const rtree::RTree<float>& rtree;
+  const std::vector<rtree::Object<T>>& objects;
+  const rtree::RTree<T>& rtree;
   const ImVec2 mouseWorldPos;
 };
 
@@ -62,13 +63,15 @@ struct Camera2D {
   }
 };
 
+template <typename T>
 class Renderer {
  public:
-  virtual void Render(const RenderContext& ctx, const Scene& scene) = 0;
+  virtual void Render(const RenderContext& ctx, const Scene<T>& scene) = 0;
   virtual ~Renderer() = default;
 };
 
-class DefaultRenderer : public Renderer {
+template <typename T>
+class DefaultRenderer : public Renderer<T> {
   static inline void AddDashedLine(ImDrawList* dl,
                                    ImVec2 a,
                                    ImVec2 b,
@@ -116,12 +119,12 @@ class DefaultRenderer : public Renderer {
   }
 
   void DrawObjectAsPoint(const RenderContext& ctx,
-                         const rtree::Object<float>& obj) {
-    const float size = 3.0f;
+                         const rtree::Object<T>& obj) {
+    const T size = 3.0f;
     const auto& x = obj.mbr.size[0];
     const auto& y = obj.mbr.size[1];
-    const ImVec2 p = ctx.camera.WorldToScreen(ImVec2(x, y), ctx);
-    ctx.dl->AddCircleFilled(p, size * ctx.camera.zoom,
+    const ImVec2 p = ctx.camera.WorldToScreen(ImVec2((float)x, (float)y), ctx);
+    ctx.dl->AddCircleFilled(p, (float)size * ctx.camera.zoom,
                             ImGui::GetColorU32(ImGuiCol_PlotHistogram));
 
     if (ctx.showNodeIds)
@@ -130,7 +133,7 @@ class DefaultRenderer : public Renderer {
                       std::to_string(obj.id).c_str());
   }
 
-  void DrawObject(const RenderContext& ctx, const rtree::Object<float>& obj) {
+  void DrawObject(const RenderContext& ctx, const rtree::Object<T>& obj) {
     const auto& x = obj.mbr.size[0];
     const auto& y = obj.mbr.size[1];
     const auto& w = obj.mbr.size[2];
@@ -138,8 +141,8 @@ class DefaultRenderer : public Renderer {
     if (w <= 0.0f || h <= 0.0f) {
       this->DrawObjectAsPoint(ctx, obj);
     } else {
-      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2(x, y), ctx);
-      const ImVec2 p1 = ctx.camera.WorldToScreen(ImVec2(x + w, y + h), ctx);
+      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2((float)x, (float)y), ctx);
+      const ImVec2 p1 = ctx.camera.WorldToScreen(ImVec2((float)(x + w), (float)(y + h)), ctx);
       ctx.dl->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_PlotHistogram), 0.0f,
                       0, 2.0f * ctx.camera.zoom);
       if (ctx.showNodeIds)
@@ -149,17 +152,17 @@ class DefaultRenderer : public Renderer {
     }
   }
 
-  void DrawMBRs(const RenderContext& ctx, const rtree::RTree<float>& rtree) {
+  void DrawMBRs(const RenderContext& ctx, const rtree::RTree<T>& rtree) {
     rtree.Dfs([&](const auto* node) {
       if (!node)
         return;
-      const float offset = 0.0f;
+      const T offset = 0.0f;
       auto x = node->mbr.size[0] - offset;
       auto y = node->mbr.size[1] - offset;
       auto w = node->mbr.size[2] + offset * 2;
       auto h = node->mbr.size[3] + offset * 2;
-      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2(x, y), ctx);
-      const ImVec2 p1 = ctx.camera.WorldToScreen(ImVec2(x + w, y + h), ctx);
+      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2((float)x, (float)y), ctx);
+      const ImVec2 p1 = ctx.camera.WorldToScreen(ImVec2((float)(x + w), (float)(y + h)), ctx);
       const float thickness = 1.0f * ctx.camera.zoom;
       const float dashLen = 6.0f * ctx.camera.zoom;
       const float gapLen = 4.0f * ctx.camera.zoom;
@@ -168,12 +171,12 @@ class DefaultRenderer : public Renderer {
     });
   }
 
-  void DrawSearch(const RenderContext& ctx, const Scene& scene) const {
+  void DrawSearch(const RenderContext& ctx, const Scene<T>& scene) const {
     ImVec4 col = ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogramHovered);
     col.w = 0.25f;  // 25% opacity
     scene.rtree.Search(
-        rtree::Rectangle<float>::FromXYWH(scene.mouseWorldPos.x,
-                                          scene.mouseWorldPos.y, 0.0f, 0.0f),
+        rtree::Rectangle<T>::FromXYWH(scene.mouseWorldPos.x,
+                                      scene.mouseWorldPos.y, 0.0f, 0.0f),
         [&](const auto* node) {
           if (!node)
             return;
@@ -182,8 +185,8 @@ class DefaultRenderer : public Renderer {
           auto y = node->mbr.size[1] - offset;
           auto w = node->mbr.size[2] + offset * 2;
           auto h = node->mbr.size[3] + offset * 2;
-          const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2(x, y), ctx);
-          const ImVec2 p1 = ctx.camera.WorldToScreen(ImVec2(x + w, y + h), ctx);
+          const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2((float)x, (float)y), ctx);
+          const ImVec2 p1 = ctx.camera.WorldToScreen(ImVec2((float)(x + w), (float)(y + h)), ctx);
           const float thickness = 2.0f * ctx.camera.zoom;
           ctx.dl->AddRectFilled(p0, p1, ImGui::GetColorU32(col));
         });
@@ -201,10 +204,10 @@ class DefaultRenderer : public Renderer {
                     ImGui::GetColorU32(ImGuiCol_Text), 2.0f * ctx.camera.zoom);
   }
 
-  void DrawKNN(const RenderContext& ctx, const Scene& scene) {
+  void DrawKNN(const RenderContext& ctx, const Scene<T>& scene) {
     ImVec4 col = ImGui::GetStyleColorVec4(ImGuiCol_PlotLinesHovered);
     col.w = 0.25f;  // 25% opacity
-    rtree::Rectangle<float> queryRect = rtree::Rectangle<float>::FromXYWH(
+    rtree::Rectangle<T> queryRect = rtree::Rectangle<T>::FromXYWH(
         scene.mouseWorldPos.x, scene.mouseWorldPos.y, 0.0f, 0.0f);
     auto results = scene.rtree.kNN(queryRect, ctx.kNN);
     float maxDist = 0.0f;
@@ -212,14 +215,14 @@ class DefaultRenderer : public Renderer {
       const float offset = 0.0f;
       auto x = res->mbr.size[0];
       auto y = res->mbr.size[1];
-      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2(x, y), ctx);
+      const ImVec2 p0 = ctx.camera.WorldToScreen(ImVec2((float)x, (float)y), ctx);
       const ImVec2 p1 = ctx.camera.WorldToScreen(scene.mouseWorldPos, ctx);
       const float thickness = 2.0f * ctx.camera.zoom;
       ctx.dl->AddLine(p0, p1, ImGui::GetColorU32(col), thickness);
 
       maxDist =
-          std::max(maxDist, std::sqrt(std::powf(x - scene.mouseWorldPos.x, 2) +
-                                      std::powf(y - scene.mouseWorldPos.y, 2)));
+          std::max(maxDist, std::sqrt(std::powf((float)x - scene.mouseWorldPos.x, 2) +
+                                      std::powf((float)y - scene.mouseWorldPos.y, 2)));
     }
 
     col = ImGui::GetStyleColorVec4(ImGuiCol_PlotLines);
@@ -230,7 +233,7 @@ class DefaultRenderer : public Renderer {
   }
 
  public:
-  void Render(const RenderContext& ctx, const Scene& scene) override {
+  void Render(const RenderContext& ctx, const Scene<T>& scene) override {
     if (!ctx.dl)
       return;
     if (scene.objects.empty()) {
@@ -269,7 +272,7 @@ class DefaultRenderer : public Renderer {
           ImVec2{ctx.viewportMin.x, ctx.viewportMin.y}, ctx);
       auto br = ctx.camera.ScreenToWorld(
           ImVec2{ctx.viewportMax.x, ctx.viewportMax.y}, ctx);
-      auto objectsToDraw = scene.rtree.Search(rtree::Rectangle<float>::FromXYWH(
+      auto objectsToDraw = scene.rtree.Search(rtree::Rectangle<T>::FromXYWH(
           tl.x, tl.y, br.x - tl.x, br.y - tl.y));
       for (auto obj : objectsToDraw) {
         const auto& x = obj->mbr.size[0];

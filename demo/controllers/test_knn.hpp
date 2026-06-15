@@ -21,9 +21,10 @@ inline void Evaluate() {
 }
 
 std::vector<double> TestKnn(AppState& state);
-void TestKnnEpoch(const int& k,
-                  const std::vector<rtree::Object<float>>& objects,
-                  const rtree::RTree<float>& rtree);
+template <typename T>
+inline void TestKnnEpoch(const int& k,
+                         const std::vector<rtree::Object<T>>& objects,
+                         const rtree::RTree<T>& rtree);
 void SaveTestKnnResults(const AppState& state);
 inline void TestKnnThreadTarget(AppState& state) {
   try {
@@ -56,7 +57,7 @@ inline void TestKnnThreadTarget(AppState& state) {
     SaveTestKnnResults(state);
     state.m_TestKnnState.phase = TestKnnPhase::Results;
   } catch (const std::exception& e) {
-    Error::Show(e.what());
+    Error::Handle(e);
     state.m_TestKnnState.phase.store(TestKnnPhase::Setup);
   }
 }
@@ -67,7 +68,8 @@ inline std::vector<double> TestKnn(AppState& state) {
   const auto tree = state.GetRTree();
   for (size_t i = 0; i < state.m_TestKnnState.setup.epochs; ++i) {
     auto time = Measures::RunMeasure([&]() -> void {
-      TestKnnEpoch(state.m_TestKnnState.setup.k, state.m_Objects, *tree);
+      TestKnnEpoch(state.m_TestKnnState.setup.k, state.m_Objects,
+                           *tree);
     });
     times.push_back(time.count());
     state.m_TestKnnState.progress.epochsDone++;
@@ -75,9 +77,10 @@ inline std::vector<double> TestKnn(AppState& state) {
   return times;
 }
 
+template <typename T>
 inline void TestKnnEpoch(const int& k,
-                         const std::vector<rtree::Object<float>>& objects,
-                         const rtree::RTree<float>& rtree) {
+                         const std::vector<rtree::Object<T>>& objects,
+                         const rtree::RTree<T>& rtree) {
   for (const auto& obj : objects) {
     rtree.kNN(obj.mbr, k);
   }

@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
       SDL_RenderPresent(renderer);
     }
   } catch (const std::exception& e) {
-    Error::Show(e.what());
+    Error::Handle(e);
   }
 
   ImGui_ImplSDLRenderer3_Shutdown();

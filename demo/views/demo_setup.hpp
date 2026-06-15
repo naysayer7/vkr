@@ -43,7 +43,7 @@ inline void DemoSetup(bool& running, AppState& state) {
         // поэтому явно переходим в Demo после постройки.
         state.SetCurrentState(State::Demo);
       } catch (const std::exception& e) {
-        Error::Show(e.what());
+        Error::Handle(e);
         state.SetCurrentState(State::DemoSetup);
       }
     }).detach();

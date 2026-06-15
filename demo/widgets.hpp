@@ -13,7 +13,7 @@ namespace Widgets {
 inline void Viewport() {
   AppState& state = AppState::instance();
   Camera2D& camera = state.m_DemoState.camera;
-  Renderer& renderer = state.m_DemoState.renderer;
+  Renderer<double>& renderer = state.m_DemoState.renderer;
 
   ImGui::BeginChild("Controls", ImVec2(600, 0), true);
   ImGui::Text("Кол-во объектов: %zu", state.GetObjectsCount());

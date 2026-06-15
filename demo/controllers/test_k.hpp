@@ -47,7 +47,7 @@ inline void TestKThreadTarget(AppState& state) {
 
     // Дерево строится один раз — k не влияет на структуру дерева.
     const std::size_t dims = state.m_Objects[0].mbr.n;
-    auto tree = std::make_unique<rtree::RTree<float>>(M, m, dims);
+    auto tree = std::make_unique<rtree::RTree<double>>(M, m, dims);
     for (const auto& obj : state.m_Objects)
       tree->Insert(&obj);
 
@@ -80,7 +80,7 @@ inline void TestKThreadTarget(AppState& state) {
 
     state.m_TestKState.phase.store(TestKPhase::Results);
   } catch (const std::exception& e) {
-    Error::Show(e.what());
+    Error::Handle(e);
     state.m_TestKState.phase.store(TestKPhase::Setup);
   }
 }

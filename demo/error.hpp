@@ -4,8 +4,12 @@
 
 namespace Error {
 
-inline void Show(const std::string& message) {
-  tinyfd_messageBox("Ошибка", message.c_str(), "ok", "error", 1);
+inline void Handle(const std::exception& exception) {
+#ifdef NDEBUG
+  tinyfd_messageBox("Ошибка", exception.what(), "ok", "error", 1);
+#else
+  throw exception;
+#endif
 }
 
 }  // namespace Error

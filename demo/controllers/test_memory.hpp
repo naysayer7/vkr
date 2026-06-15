@@ -75,7 +75,7 @@ inline void TestMemoryThreadTarget(AppState& state) {
 
     state.m_TestMemoryState.phase.store(TestMemoryPhase::Results);
   } catch (const std::exception& e) {
-    Error::Show(e.what());
+    Error::Handle(e);
     state.m_TestMemoryState.phase.store(TestMemoryPhase::Setup);
   }
 }

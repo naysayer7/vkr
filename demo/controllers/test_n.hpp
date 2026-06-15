@@ -114,7 +114,7 @@ inline void TestNThreadTarget(AppState& state) {
 
     state.m_TestNState.phase.store(TestNPhase::Results);
   } catch (const std::exception& e) {
-    Error::Show(e.what());
+    Error::Handle(e);
     state.m_TestNState.phase.store(TestNPhase::Setup);
   }
 }
