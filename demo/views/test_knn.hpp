@@ -7,6 +7,7 @@
 #include "controllers/test_knn.hpp"
 #include "state.hpp"
 #include "utils.hpp"
+#include "views/test_results.hpp"
 
 namespace Views {
 
@@ -75,11 +76,10 @@ inline void TestKnnProgress(TestKnnProgressState& state) {
                      std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
-inline void TestKnnResults(TestKnnResultState& state) {
-  ImGui::Text("Результаты тестирования сохранены");
-  if (ImGui::Button("Назад в меню")) {
-    AppState::instance().SetCurrentState(State::MainMenu);
-    AppState::instance().m_TestKnnState.Reset();
-  }
+inline void TestKnnResults(TestKnnResultState&) {
+  RenderTestResults(
+      {"Расположение: results/knn/", "Формат файлов: {k}_{M}.npy",
+       "Каждый файл — 1D массив времён (нс) по эпохам."},
+      [] { AppState::instance().m_TestKnnState.Reset(); });
 }
 }  // namespace Views

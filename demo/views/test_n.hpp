@@ -5,6 +5,7 @@
 
 #include "controllers/test_n.hpp"
 #include "state.hpp"
+#include "views/test_results.hpp"
 
 namespace Views {
 
@@ -46,9 +47,10 @@ inline void TestNSetup(TestNSetupState& state) {
   ImGui::InputInt("k для kNN", &state.k);
 
   state.maxEntries = std::max(state.maxEntries, 2);
-  state.minEntries = std::max(1, std::min(state.minEntries, (state.maxEntries + 1) / 2));
-  state.epochs     = std::max(state.epochs, 1);
-  state.k          = std::max(state.k, 1);
+  state.minEntries =
+      std::max(1, std::min(state.minEntries, (state.maxEntries + 1) / 2));
+  state.epochs = std::max(state.epochs, 1);
+  state.k = std::max(state.k, 1);
 
   ImGui::Spacing();
   ImGui::Text("Датасеты (%d файлов):", (int)state.selectedFiles.size());
@@ -87,11 +89,11 @@ inline void TestNSetup(TestNSetupState& state) {
 }
 
 inline void TestNProgress(TestNProgressState& state) {
-  const int done       = state.done.load();
-  const int total      = state.total.load();
+  const int done = state.done.load();
+  const int total = state.total.load();
   const int epochsDone = state.epochsDone.load();
-  const int epochs     = state.epochs.load();
-  const int currentN   = state.currentN.load();
+  const int epochs = state.epochs.load();
+  const int currentN = state.currentN.load();
 
   if (total == 0) {
     ImGui::Text("Подготовка...");
@@ -103,26 +105,20 @@ inline void TestNProgress(TestNProgressState& state) {
   const float outerFraction =
       (static_cast<float>(done) + epochFraction) / static_cast<float>(total);
 
-  ImGui::ProgressBar(
-      outerFraction, ImVec2(0.0f, 0.0f),
-      std::format("Датасет {}/{}  N={}",
-                  std::min(done + 1, total), total, currentN).c_str());
+  ImGui::ProgressBar(outerFraction, ImVec2(0.0f, 0.0f),
+                     std::format("Датасет {}/{}  N={}",
+                                 std::min(done + 1, total), total, currentN)
+                         .c_str());
 
-  ImGui::ProgressBar(
-      epochFraction, ImVec2(0.0f, 0.0f),
-      std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
+  ImGui::ProgressBar(epochFraction, ImVec2(0.0f, 0.0f),
+                     std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
 inline void TestNResults() {
-  ImGui::Text("Результаты сохранены в results/n/");
-  ImGui::Separator();
-  ImGui::Text("Формат файлов: {n}_{k}_{M}_{m}.npy");
-  ImGui::Text("Каждый файл — 1D массив времён (нс) по эпохам.");
-
-  if (ImGui::Button("Назад в меню")) {
-    AppState::instance().SetCurrentState(State::MainMenu);
-    AppState::instance().m_TestNState.Reset();
-  }
+  RenderTestResults(
+      {"Расположение: results/n/", "Формат файлов: {n}_{k}_{M}_{m}.npy",
+       "Каждый файл — 1D массив времён (нс) по эпохам."},
+      [] { AppState::instance().m_TestNState.Reset(); });
 }
 
 }  // namespace Views

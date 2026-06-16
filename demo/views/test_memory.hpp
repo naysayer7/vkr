@@ -5,6 +5,7 @@
 #include "controllers/test_memory.hpp"
 #include "state.hpp"
 #include "utils.hpp"
+#include "views/test_results.hpp"
 
 namespace Views {
 
@@ -71,31 +72,29 @@ inline void TestMemoryProgress(TestMemoryProgressState& state) {
 }
 
 inline void TestMemoryResults(TestMemoryResultState& state) {
-  ImGui::Text(
-      std::format("Результаты сохранены в {}", state.savedFilename).c_str());
-  ImGui::Separator();
+  RenderTestResults(
+      {"Расположение: " + state.savedFilename,
+       "Формат: 2D массив, столбцы [M, память (байт)]"},
+      [] { AppState::instance().m_TestMemoryState.Reset(); },
+      [&state] {
+        if (ImGui::BeginTable("mem_results", 2,
+                              ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_BordersOuter |
+                                  ImGuiTableFlags_BordersV)) {
+          ImGui::TableSetupColumn("M");
+          ImGui::TableSetupColumn("Память (байт)");
+          ImGui::TableHeadersRow();
 
-  if (ImGui::BeginTable("mem_results", 2,
-                        ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter |
-                            ImGuiTableFlags_BordersV)) {
-    ImGui::TableSetupColumn("M");
-    ImGui::TableSetupColumn("Память (байт)");
-    ImGui::TableHeadersRow();
-
-    for (const auto& [params, mem] : state.memorySizes) {
-      ImGui::TableNextRow();
-      ImGui::TableSetColumnIndex(0);
-      ImGui::Text(std::to_string(params.maxEntries).c_str());
-      ImGui::TableSetColumnIndex(1);
-      ImGui::Text(std::to_string(mem).c_str());
-    }
-    ImGui::EndTable();
-  }
-
-  if (ImGui::Button("Назад в меню")) {
-    AppState::instance().SetCurrentState(State::MainMenu);
-    AppState::instance().m_TestMemoryState.Reset();
-  }
+          for (const auto& [params, mem] : state.memorySizes) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text(std::to_string(params.maxEntries).c_str());
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text(std::to_string(mem).c_str());
+          }
+          ImGui::EndTable();
+        }
+      });
 }
 
 }  // namespace Views
