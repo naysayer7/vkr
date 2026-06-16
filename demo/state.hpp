@@ -60,13 +60,10 @@ enum class TestKnnPhase { Setup, Progress, Results };
 enum class TestMemoryPhase { Setup, Progress, Results };
 
 struct TestMemorySetupState {
-  int minObjects[2];
-  int maxObjects[2];
+  int maxObjects[2];  // Диапазон M: [мин, макс]
 
   void Reset() {
-    minObjects[0] = 1;
-    minObjects[1] = 5;
-    maxObjects[0] = 1;
+    maxObjects[0] = 2;
     maxObjects[1] = 10;
   }
 
@@ -116,7 +113,6 @@ struct TestKSetupState {
   int kMin;
   int kMax;
   int kStep;
-  int minEntries;
   int maxEntries;
   int epochs;
 
@@ -124,7 +120,6 @@ struct TestKSetupState {
     kMin = 1;
     kMax = 20;
     kStep = 1;
-    minEntries = 2;
     maxEntries = 4;
     epochs = 10;
   }
@@ -229,8 +224,7 @@ struct TestKnnSetupState {
 
   int paramsInput[2];  // min, max
 
-  int minObjects[2];  // min, max
-  int maxObjects[2];  // min, max
+  int maxObjects[2];  // Диапазон M: [мин, макс]
 
   void Reset() {
     params.clear();
@@ -239,9 +233,6 @@ struct TestKnnSetupState {
 
     paramsInput[0] = 2;
     paramsInput[1] = 4;
-
-    minObjects[0] = 1;
-    minObjects[1] = 5;
 
     maxObjects[0] = 1;
     maxObjects[1] = 10;

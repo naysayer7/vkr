@@ -40,7 +40,6 @@ inline void TestKSetup(TestKSetupState& state) {
   ImGui::Separator();
 
   ImGui::InputInt("M (maxEntries)", &state.maxEntries);
-  ImGui::InputInt("m (minEntries)", &state.minEntries);
   ImGui::Spacing();
   ImGui::InputInt("k минимальное", &state.kMin);
   ImGui::InputInt("k максимальное", &state.kMax);
@@ -48,7 +47,6 @@ inline void TestKSetup(TestKSetupState& state) {
   ImGui::InputInt("Эпох на измерение", &state.epochs);
 
   state.maxEntries = std::max(state.maxEntries, 2);
-  state.minEntries = std::max(1, std::min(state.minEntries, (state.maxEntries + 1) / 2));
   state.kMin       = std::max(state.kMin, 1);
   state.kMax       = std::max(state.kMax, state.kMin);
   state.kStep      = std::max(state.kStep, 1);
@@ -91,7 +89,7 @@ inline void TestKProgress(TestKProgressState& state) {
 inline void TestKResults() {
   ImGui::Text("Результаты сохранены в results/k/");
   ImGui::Separator();
-  ImGui::Text("Формат файлов: {k}_{M}_{m}.npy");
+  ImGui::Text("Формат файлов: {n}_{k}_{M}.npy");
   ImGui::Text("Каждый файл — 1D массив времён (нс) по эпохам.");
 
   if (ImGui::Button("Назад в меню")) {

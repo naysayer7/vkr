@@ -29,13 +29,8 @@ inline std::string FormatDuration(const double& duration) {
   return FormatDuration(Measures::Duration(duration));
 }
 
-inline int CalculateRunsCount(const int minObjects[2],
-                              const int maxObjects[2]) {
-  int runs = 0;
-  for (int M = maxObjects[0]; M <= maxObjects[1]; ++M)
-    for (int m = minObjects[0]; m <= std::min(minObjects[1], (M + 1) / 2); ++m)
-      runs++;
-  return runs;
+inline int CalculateRunsCount(const int maxObjects[2]) {
+  return std::max(0, maxObjects[1] - maxObjects[0] + 1);
 }
 
 class IndexIterator {

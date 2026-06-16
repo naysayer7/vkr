@@ -40,18 +40,14 @@ inline void TestMemorySetup(TestMemorySetupState& state) {
   ImGui::Text("Тестирование использования памяти");
   ImGui::Separator();
   ImGui::InputInt2("M (maxEntries) диапазон", state.maxObjects);
-  ImGui::InputInt2("m (minEntries) диапазон", state.minObjects);
 
-  // Ограничения: значения >= 1, min <= max
+  // Ограничения: значения >= 2, min <= max
   state.maxObjects[0] = std::max(state.maxObjects[0], 2);
   state.maxObjects[1] = std::max(state.maxObjects[1], state.maxObjects[0]);
-  state.minObjects[0] = std::max(state.minObjects[0], 1);
-  state.minObjects[1] = std::max(state.minObjects[1], state.minObjects[0]);
 
-  ImGui::Text(
-      std::format("Количество тестов: {}",
-                  Utils::CalculateRunsCount(state.minObjects, state.maxObjects))
-          .c_str());
+  ImGui::Text(std::format("Количество тестов: {}",
+                          Utils::CalculateRunsCount(state.maxObjects))
+                  .c_str());
 
   if (ImGui::Button("Начать тестирование"))
     Controllers::StartTestMemory();
@@ -71,8 +67,7 @@ inline void TestMemoryProgress(TestMemoryProgressState& state) {
                      ImVec2(0.0f, 0.0f),
                      std::format("Тест {}/{}", done, total).c_str());
 
-  ImGui::Text(std::format("M: {}  m: {}", params.maxEntries, params.minEntries)
-                  .c_str());
+  ImGui::Text(std::format("M: {}", params.maxEntries).c_str());
 }
 
 inline void TestMemoryResults(TestMemoryResultState& state) {
@@ -80,11 +75,10 @@ inline void TestMemoryResults(TestMemoryResultState& state) {
       std::format("Результаты сохранены в {}", state.savedFilename).c_str());
   ImGui::Separator();
 
-  if (ImGui::BeginTable("mem_results", 3,
+  if (ImGui::BeginTable("mem_results", 2,
                         ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter |
                             ImGuiTableFlags_BordersV)) {
     ImGui::TableSetupColumn("M");
-    ImGui::TableSetupColumn("m");
     ImGui::TableSetupColumn("Память (байт)");
     ImGui::TableHeadersRow();
 
@@ -93,8 +87,6 @@ inline void TestMemoryResults(TestMemoryResultState& state) {
       ImGui::TableSetColumnIndex(0);
       ImGui::Text(std::to_string(params.maxEntries).c_str());
       ImGui::TableSetColumnIndex(1);
-      ImGui::Text(std::to_string(params.minEntries).c_str());
-      ImGui::TableSetColumnIndex(2);
       ImGui::Text(std::to_string(mem).c_str());
     }
     ImGui::EndTable();
