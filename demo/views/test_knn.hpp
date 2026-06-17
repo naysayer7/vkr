@@ -13,7 +13,7 @@ namespace Views {
 
 void TestKnnSetup(TestKnnSetupState& state);
 void TestKnnProgress(TestKnnProgressState& state);
-void TestKnnResults(TestKnnResultState& state);
+void TestKnnResults();
 
 inline void TestKnn(bool& running, TestKnnState& state) {
   const ImGuiViewport* vp = ImGui::GetMainViewport();
@@ -31,7 +31,7 @@ inline void TestKnn(bool& running, TestKnnState& state) {
       TestKnnProgress(state.progress);
       break;
     case TestKnnPhase::Results:
-      TestKnnResults(state.result);
+      TestKnnResults();
       break;
     default:
       std::unreachable();
@@ -80,7 +80,7 @@ inline void TestKnnProgress(TestKnnProgressState& state) {
                      std::format("Эпоха {}/{}", epochsDone, epochs).c_str());
 }
 
-inline void TestKnnResults(TestKnnResultState&) {
+inline void TestKnnResults() {
   RenderTestResults(
       {"Расположение: results/knn/", "Формат файлов: {k}_{M}.npy",
        "Каждый файл — 1D массив времён (нс) по эпохам."},

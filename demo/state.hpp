@@ -260,23 +260,15 @@ struct TestKnnProgressState {
   TestKnnProgressState() { Reset(); }
 };
 
-struct TestKnnResultState {
-  std::vector<std::pair<RTreeParameters, std::vector<double>>> times;
-
-  void Reset() { times.clear(); }
-};
-
 struct TestKnnState {
   std::atomic<TestKnnPhase> phase{TestKnnPhase::Setup};
   TestKnnSetupState setup;
   TestKnnProgressState progress;
-  TestKnnResultState result;
 
   void Reset() {
     phase.store(TestKnnPhase::Setup);
     progress.Reset();
     setup.Reset();
-    result.Reset();
   }
 
   TestKnnState() { Reset(); }
