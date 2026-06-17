@@ -16,6 +16,9 @@ inline void Viewport() {
   Renderer<double>& renderer = state.m_DemoState.renderer;
 
   ImGui::BeginChild("Controls", ImVec2(600, 0), true);
+  if (ImGui::Button("Назад в меню"))
+    state.SetCurrentState(State::MainMenu);
+  ImGui::Separator();
   ImGui::Text("Кол-во объектов: %zu", state.GetObjectsCount());
   ImGui::Text("Используемая деревом память: %s",
               Utils::FormatMemorySize(state.GetRTreeMemorySize()).c_str());
@@ -37,9 +40,12 @@ inline void Viewport() {
   ImGui::BeginDisabled(!state.m_DemoState.showMBRs);
   ImGui::Checkbox("Показать поиск", &state.m_DemoState.showSearch);
   ImGui::EndDisabled();
+  ImGui::Checkbox("Показать kNN", &state.m_DemoState.showKNN);
   ImGui::Checkbox("Показать ID узлов", &state.m_DemoState.showNodeIds);
   ImGui::Separator();
+  ImGui::BeginDisabled(!state.m_DemoState.showKNN);
   ImGui::InputInt("kNN", &state.m_DemoState.kNN);
+  ImGui::EndDisabled();
 
   ImGui::EndChild();
 
@@ -88,7 +94,7 @@ inline void Viewport() {
     renderer.Render(
         {dl, viewportMin, viewportMax, camera, state.m_DemoState.showObjects,
          state.m_DemoState.showMBRs, state.m_DemoState.showSearch,
-         state.m_DemoState.showNodeIds, state.m_DemoState.kNN},
+         state.m_DemoState.showNodeIds, state.m_DemoState.showKNN, state.m_DemoState.kNN },
         Scene{state.m_Objects, *tree, state.m_MouseWorldPos});
   }
   ImGui::PopClipRect();

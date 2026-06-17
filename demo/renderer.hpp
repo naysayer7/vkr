@@ -17,6 +17,7 @@ struct RenderContext {
   bool showMBRs;
   bool showSearch;
   bool showNodeIds;
+  bool showKNN;
   int kNN;
 };
 
@@ -194,10 +195,12 @@ class DefaultRenderer : public Renderer<T> {
 
   void DrawMousePosition(const RenderContext& ctx,
                          const ImVec2& mouseWorldPos) {
+
+    constexpr float crosshairSize = 3.0f;
     const ImVec2 p0 = ctx.camera.WorldToScreen(
-        ImVec2(mouseWorldPos.x - 5.0f, mouseWorldPos.y - 5.0f), ctx);
+        ImVec2(mouseWorldPos.x - crosshairSize, mouseWorldPos.y - crosshairSize), ctx);
     const ImVec2 p1 = ctx.camera.WorldToScreen(
-        ImVec2(mouseWorldPos.x + 5.0f, mouseWorldPos.y + 5.0f), ctx);
+        ImVec2(mouseWorldPos.x + crosshairSize, mouseWorldPos.y + crosshairSize), ctx);
     ctx.dl->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y),
                     ImGui::GetColorU32(ImGuiCol_Text), 2.0f * ctx.camera.zoom);
     ctx.dl->AddLine(ImVec2(p0.x, p1.y), ImVec2(p1.x, p0.y),
@@ -298,7 +301,7 @@ class DefaultRenderer : public Renderer<T> {
     // Mouse position
     this->DrawMousePosition(ctx, scene.mouseWorldPos);
 
-    if (ctx.kNN > 0) {
+    if (ctx.showKNN && ctx.kNN > 0) {
       this->DrawKNN(ctx, scene);
     }
   }

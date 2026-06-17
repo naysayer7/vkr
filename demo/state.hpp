@@ -45,6 +45,7 @@ struct DemoState {
   bool showMBRs = false;
   bool showSearch = false;
   bool showNodeIds = false;
+  bool showKNN = false;
   int kNN = 5;
 
   void Reset() { camera = Camera2D(); }

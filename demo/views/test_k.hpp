@@ -60,6 +60,10 @@ inline void TestKSetup(TestKSetupState& state) {
 
   if (ImGui::Button("Начать тестирование"))
     Controllers::StartTestK();
+
+  ImGui::SameLine();
+  if (ImGui::Button("Назад"))
+    AppState::instance().SetCurrentState(State::MainMenu);
 }
 
 inline void TestKProgress(TestKProgressState& state) {

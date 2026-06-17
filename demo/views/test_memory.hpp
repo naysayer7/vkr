@@ -52,6 +52,10 @@ inline void TestMemorySetup(TestMemorySetupState& state) {
 
   if (ImGui::Button("Начать тестирование"))
     Controllers::StartTestMemory();
+
+  ImGui::SameLine();
+  if (ImGui::Button("Назад"))
+    AppState::instance().SetCurrentState(State::MainMenu);
 }
 
 inline void TestMemoryProgress(TestMemoryProgressState& state) {

@@ -53,6 +53,10 @@ inline void TestKnnSetup(TestKnnSetupState& state) {
   if (ImGui::Button("Начать тестирование")) {
     Controllers::Evaluate();
   }
+
+  ImGui::SameLine();
+  if (ImGui::Button("Назад"))
+    AppState::instance().SetCurrentState(State::MainMenu);
 }
 
 inline void TestKnnProgress(TestKnnProgressState& state) {
