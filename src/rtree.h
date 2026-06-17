@@ -21,6 +21,7 @@ struct Rectangle {
   static_assert(std::is_floating_point_v<T>,
                 "Rectangle<T>: T должен быть типом с плавающей точкой.");
 
+  // Массив размера 2*n: первые n элементов — **нижние** границы, вторые n элементов — протяжённости.
   std::unique_ptr<T[]> size = nullptr;
   std::size_t n;
 
