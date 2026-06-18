@@ -34,6 +34,8 @@ inline void MainMenu(bool& running, AppState& state) {
   ImGui::EndDisabled();
 
   ImGui::BeginDisabled(state.m_Objects.empty());
+  if (ImGui::Button("Тестирование наивного KNN по N объектов"))
+    state.SetCurrentState(State::TestNNaive);
   if (ImGui::Button("Тестирование KNN по M"))
     state.SetCurrentState(State::TestKnn);
   if (ImGui::Button("Тестирование KNN по N объектов"))

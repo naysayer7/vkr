@@ -18,6 +18,7 @@
 #include "views/test_knn.hpp"
 #include "views/test_memory.hpp"
 #include "views/test_n.hpp"
+#include "views/test_n_naive.hpp"
 #include "views/test_k.hpp"
 #include "widgets.hpp"
 
@@ -139,6 +140,9 @@ int main(int argc, char* argv[]) {
           break;
         case State::TestN:
           Views::TestN(running, state.m_TestNState);
+          break;
+        case State::TestNNaive:
+          Views::TestNNaive(running, state.m_TestNNaiveState);
           break;
         case State::TestK:
           Views::TestK(running, state.m_TestKState);

@@ -18,6 +18,7 @@ enum class State {
   TestKnn,        // Тестирование производительности KNN-запросов
   TestMemory,     // Тестирование использования памяти
   TestN,          // Тестирование KNN по количеству объектов
+  TestNNaive,     // Тестирование наивного KNN (перебор) по числу объектов
   TestK,          // Тестирование KNN по параметру k
 };
 
@@ -218,6 +219,56 @@ struct TestNState {
   }
 };
 
+enum class TestNNaivePhase { Setup, Progress, Results };
+
+struct TestNNaiveSetupState {
+  int epochs;
+  int k;
+  std::vector<std::string> selectedFiles;
+
+  void Reset() {
+    epochs = 10;
+    k = 5;
+    selectedFiles.clear();
+  }
+
+  TestNNaiveSetupState() { Reset(); }
+
+  int CalculateMeasurements() const {
+    return static_cast<int>(selectedFiles.size());
+  }
+};
+
+struct TestNNaiveProgressState {
+  std::atomic<int> done;
+  std::atomic<int> total;
+  std::atomic<int> epochsDone;
+  std::atomic<int> epochs;
+  std::atomic<int> currentN;
+
+  void Reset() {
+    done = 0;
+    total = 0;
+    epochsDone = 0;
+    epochs = 0;
+    currentN = 0;
+  }
+
+  TestNNaiveProgressState() { Reset(); }
+};
+
+struct TestNNaiveState {
+  std::atomic<TestNNaivePhase> phase{TestNNaivePhase::Setup};
+  TestNNaiveSetupState setup;
+  TestNNaiveProgressState progress;
+
+  void Reset() {
+    phase.store(TestNNaivePhase::Setup);
+    setup = TestNNaiveSetupState{};
+    progress.Reset();
+  }
+};
+
 struct TestKnnSetupState {
   std::vector<RTreeParameters> params;
   int k;
@@ -303,6 +354,7 @@ class AppState {
   TestKnnState m_TestKnnState;
   TestMemoryState m_TestMemoryState;
   TestNState m_TestNState;
+  TestNNaiveState m_TestNNaiveState;
   TestKState m_TestKState;
 
   void RecalculateMemorySize() {
