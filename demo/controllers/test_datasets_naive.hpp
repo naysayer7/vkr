@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <thread>
 
@@ -16,17 +17,19 @@ void TestDatasetsNaiveThreadTarget(AppState& state);
 
 // Наивный kNN: перебор всех объектов с вычислением расстояния до запроса и
 // выбором k ближайших. Расстояния до всех объектов считаются за O(N), отбор k
-// ближайших — за O(N + k·log k): nth_element даёт линейный (в среднем) разбор по
-// k-му элементу, затем сортируются только эти k штук для порядка по возрастанию
-// расстояния (как у RTree::kNN). Используется как эталон для сравнения.
+// ближайших — за O(N + k·log k): nth_element даёт линейный (в среднем) разбор
+// по k-му элементу, затем сортируются только эти k штук для порядка по
+// возрастанию расстояния (как у RTree::kNN). Используется как эталон для
+// сравнения.
 template <typename T>
 inline std::vector<const rtree::Object<T>*> NaiveKnn(
-    const std::vector<rtree::Object<T>>& objects,
-    const rtree::Rectangle<T>& query, std::size_t k) {
+    const std::vector<const rtree::Object<T>*>& objects,
+    const rtree::Rectangle<T>& query,
+    std::size_t k) {
   std::vector<std::pair<T, const rtree::Object<T>*>> dists;
   dists.reserve(objects.size());
-  for (const auto& obj : objects)
-    dists.emplace_back(obj.mbr.MinDistanceSq(query), &obj);
+  for (const auto* obj : objects)
+    dists.emplace_back(obj->mbr.MinDistanceSq(query), obj);
 
   const std::size_t kk = std::min(k, dists.size());
   const auto byDist = [](const auto& a, const auto& b) {
@@ -71,12 +74,15 @@ inline void StartTestDatasetsNaive() {
 
 inline void TestDatasetsNaiveThreadTarget(AppState& state) {
   try {
-    TestDatasetsNaiveProgressState& progress = state.m_TestDatasetsNaiveState.progress;
-    const TestDatasetsNaiveSetupState& setup = state.m_TestDatasetsNaiveState.setup;
+    TestDatasetsNaiveProgressState& progress =
+        state.m_TestDatasetsNaiveState.progress;
+    const TestDatasetsNaiveSetupState& setup =
+        state.m_TestDatasetsNaiveState.setup;
 
     progress.Reset();
 
     const int k = setup.k;
+    const int queryPercent = setup.queryPercent;
     const int measurements = setup.CalculateMeasurements();
 
     if (measurements <= 0)
@@ -117,19 +123,30 @@ inline void TestDatasetsNaiveThreadTarget(AppState& state) {
 
       progress.epochsDone = 0;
 
+      if (n < 2)
+        throw std::runtime_error(
+            "Набор «" + datasetName +
+            "» слишком мал для hold-out (нужно ≥ 2 объектов).");
+      auto split =
+          Utils::SplitHoldout(objects, queryPercent, Utils::kQuerySeed);
+      const size_t indexedCount = split.indexed.size();
+      const size_t queryCount = split.queries.size();
+
       std::vector<double> times;
       times.reserve(setup.epochs);
       for (int e = 0; e < setup.epochs; ++e) {
         auto elapsed = Measures::RunMeasure([&]() {
-          for (const auto& obj : objects)
-            NaiveKnn(objects, obj.mbr, k);
+          for (const auto* q : split.queries)
+            NaiveKnn(split.indexed, q->mbr, k);
         });
         times.push_back(elapsed.count());
         progress.epochsDone++;
       }
 
-      const std::string filename =
-          resultsDir + "/" + datasetName + "_results.npy";
+      const std::string filename = resultsDir + "/" + datasetName +
+                                   "_indexed=" + std::to_string(indexedCount) +
+                                   "_queries=" + std::to_string(queryCount) +
+                                   "_k=" + std::to_string(k) + ".npy";
       npy::npy_data_ptr<double> out{
           times.data(), {(npy::ndarray_len_t)times.size()}, false};
       std::printf("Saving %s\n", filename.c_str());

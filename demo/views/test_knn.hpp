@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <chrono>
 #include <format>
 #include <stdexcept>
@@ -44,11 +45,22 @@ inline void TestKnnSetup(TestKnnSetupState& state) {
   ImGui::Text("Настройки для тестирования");
   ImGui::InputInt("Количество эпох", &state.epochs);
   ImGui::InputInt("k для kNN", &state.k);
+  ImGui::SliderInt("Доля запросов (hold-out), %", &state.queryPercent, 1, 99);
+  state.queryPercent = std::clamp(state.queryPercent, 1, 99);
 
   ImGui::InputInt2("Диапазон M (мин, макс)", (int*)&state.maxObjects);
   ImGui::Text(std::format("Количество тестов: {}",
                           Utils::CalculateRunsCount(state.maxObjects))
                   .c_str());
+
+  const std::size_t loadedN = AppState::instance().GetObjectsCount();
+  if (loadedN >= 2) {
+    const std::size_t qCount =
+        Utils::HoldoutQueryCount(loadedN, state.queryPercent);
+    ImGui::Text(std::format("Запросов (hold-out): {} из {}  (индекс: {})",
+                            qCount, loadedN, loadedN - qCount)
+                    .c_str());
+  }
 
   if (ImGui::Button("Начать тестирование")) {
     Controllers::Evaluate();
@@ -81,9 +93,9 @@ inline void TestKnnProgress(TestKnnProgressState& state) {
 }
 
 inline void TestKnnResults() {
-  RenderTestResults(
-      {"Расположение: results/knn/", "Формат файлов: {k}_{M}.npy",
-       "Каждый файл — 1D массив времён (нс) по эпохам."},
-      [] { AppState::instance().m_TestKnnState.Reset(); });
+  RenderTestResults({"Расположение: results/knn/", "Формат файлов: {k}_{M}.npy",
+                     "Запросы: hold-out — часть объектов исключена из индекса.",
+                     "Каждый файл — 1D массив времён (нс) по эпохам."},
+                    [] { AppState::instance().m_TestKnnState.Reset(); });
 }
 }  // namespace Views

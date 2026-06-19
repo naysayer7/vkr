@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <format>
 #include "imgui.h"
 
@@ -46,12 +47,22 @@ inline void TestKSetup(TestKSetupState& state) {
   ImGui::InputInt("k максимальное", &state.kMax);
   ImGui::InputInt("Шаг k", &state.kStep);
   ImGui::InputInt("Эпох на измерение", &state.epochs);
+  ImGui::SliderInt("Доля запросов (hold-out), %", &state.queryPercent, 1, 99);
 
   state.maxEntries = std::max(state.maxEntries, 2);
   state.kMin = std::max(state.kMin, 1);
   state.kMax = std::max(state.kMax, state.kMin);
   state.kStep = std::max(state.kStep, 1);
   state.epochs = std::max(state.epochs, 1);
+  state.queryPercent = std::clamp(state.queryPercent, 1, 99);
+
+  const std::size_t loadedN = AppState::instance().GetObjectsCount();
+  if (loadedN >= 2) {
+    const std::size_t qCount =
+        Utils::HoldoutQueryCount(loadedN, state.queryPercent);
+    ImGui::Text("Запросов (hold-out): %zu из %zu  (индекс: %zu)", qCount,
+                loadedN, loadedN - qCount);
+  }
 
   ImGui::Text(std::format("Измерений: {}  (k: {}..{} шаг {})",
                           state.CalculateMeasurements(), state.kMin, state.kMax,
@@ -95,6 +106,7 @@ inline void TestKProgress(TestKProgressState& state) {
 inline void TestKResults() {
   RenderTestResults(
       {"Расположение: results/k/", "Формат файлов: {n}_{k}_{M}.npy",
+       "n — размер индекса после hold-out (исключены запросы).",
        "Каждый файл — 1D массив времён (нс) по эпохам."},
       [] { AppState::instance().m_TestKState.Reset(); });
 }

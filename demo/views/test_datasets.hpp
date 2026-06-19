@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <filesystem>
 #include <format>
 #include "imgui.h"
@@ -45,12 +46,14 @@ inline void TestDatasetsSetup(TestDatasetsSetupState& state) {
   ImGui::InputInt("m (minEntries)", &state.minEntries);
   ImGui::InputInt("Эпох на измерение", &state.epochs);
   ImGui::InputInt("k для kNN", &state.k);
+  ImGui::SliderInt("Доля запросов (hold-out), %", &state.queryPercent, 1, 99);
 
   state.maxEntries = std::max(state.maxEntries, 2);
   state.minEntries =
       std::max(1, std::min(state.minEntries, (state.maxEntries + 1) / 2));
   state.epochs = std::max(state.epochs, 1);
   state.k = std::max(state.k, 1);
+  state.queryPercent = std::clamp(state.queryPercent, 1, 99);
 
   ImGui::Spacing();
   ImGui::Text("Датасеты (%d файлов):", (int)state.selectedFiles.size());
@@ -118,7 +121,8 @@ inline void TestDatasetsResults() {
   RenderTestResults(
       {"Расположение: results/datasets/",
        "Формат файлов: {название_датасета}_results.npy",
-       "Каждый файл — 1D массив времён (нс) по эпохам."},
+       "Каждый файл — 1D массив времён (нс) по эпохам.",
+       "Запросы: hold-out — часть объектов исключена из индекса."},
       [] { AppState::instance().m_TestDatasetsState.Reset(); });
 }
 

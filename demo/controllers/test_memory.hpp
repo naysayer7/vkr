@@ -32,8 +32,8 @@ inline void TestMemoryThreadTarget(AppState& state) {
 
     progress.total = Utils::CalculateRunsCount(maxO);
 
-    // STR (bulk-load) пакует листья по M независимо от нижней границы m, поэтому
-    // память зависит только от M. m берётся как валидное (M + 1) / 2.
+    // STR (bulk-load) пакует листья по M независимо от нижней границы m,
+    // поэтому память зависит только от M. m берётся как валидное (M + 1) / 2.
     for (int M = maxO[0]; M <= maxO[1]; ++M) {
       const int m = (M + 1) / 2;
       state.m_RTreeParams.maxEntries = M;
@@ -54,9 +54,9 @@ inline void TestMemoryThreadTarget(AppState& state) {
     std::filesystem::create_directories(resultsDir);
 
     const std::string filename =
-        resultsDir + "/" + std::to_string(std::time(nullptr)) + "_" +
-        std::to_string(state.GetObjectsCount()) + "_" +
-        std::to_string(state.GetRTree()->GetN()) + ".npy";
+        resultsDir + "/" + std::to_string(std::time(nullptr)) +
+        "_indexed=" + std::to_string(state.GetObjectsCount()) +
+        "_dims=" + std::to_string(state.GetRTree()->GetN()) + ".npy";
     result.savedFilename = filename;
 
     const std::size_t rows = result.memorySizes.size();

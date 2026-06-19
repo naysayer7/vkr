@@ -1,5 +1,7 @@
 #pragma once
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <stdexcept>
 
@@ -20,12 +22,18 @@ inline void Evaluate() {
   thread.detach();
 }
 
-std::vector<double> TestKnn(AppState& state);
+std::vector<double> RunTestKnn(
+    AppState& state,
+    const rtree::RTree<double>& tree,
+    const std::vector<const rtree::Object<double>*>& queries);
 template <typename T>
 inline void TestKnnEpoch(const int& k,
-                         const std::vector<rtree::Object<T>>& objects,
+                         const std::vector<const rtree::Object<T>*>& queries,
                          const rtree::RTree<T>& rtree);
-void SaveTestKnnResult(const std::string& resultsDir, const int& k,
+void SaveTestKnnResult(const std::string& resultsDir,
+                       const int& k,
+                       const std::size_t& queryCount,
+                       const std::size_t& indexedCount,
                        const RTreeParameters& params,
                        const std::vector<double>& times);
 inline void TestKnnThreadTarget(AppState& state) {
@@ -39,23 +47,33 @@ inline void TestKnnThreadTarget(AppState& state) {
     state.m_TestKnnState.progress.runs =
         Utils::CalculateRunsCount(state.m_TestKnnState.setup.maxObjects);
 
+    if (state.m_Objects.size() < 2)
+      throw std::runtime_error(
+          "Невозможно запустить тест: нужно ≥ 2 загруженных объектов для "
+          "hold-out.");
+
     const std::string resultsDir = std::filesystem::current_path().string() +
                                    "/results/knn/" +
                                    std::to_string(std::time(nullptr));
     std::filesystem::create_directories(resultsDir);
 
-    // STR (bulk-load) не использует нижнюю границу m, поэтому тестируем только по
-    // M. Для построения дерева m берётся как максимально допустимое значение
-    // (M + 1) / 2 — оно валидно при любом M >= 1 и на STR не влияет.
+    auto split = Utils::SplitHoldout(state.m_Objects,
+                                     state.m_TestKnnState.setup.queryPercent,
+                                     Utils::kQuerySeed);
+    const std::size_t indexedCount = split.indexed.size();
+    const std::size_t queryCount = split.queries.size();
+    const std::size_t dims = state.m_Objects[0].mbr.n;
+
     for (int M = maxObjects[0]; M <= maxObjects[1]; ++M) {
       const int m = (M + 1) / 2;
-      state.m_RTreeParams.maxEntries = M;
-      state.m_RTreeParams.minEntries = m;
-      state.EnsureRTreeBuiltWithCurrentParameters();
-      state.m_TestKnnState.progress.currentParams = state.m_RTreeParams;
-      std::vector<double> times = TestKnn(state);
-      SaveTestKnnResult(resultsDir, state.m_TestKnnState.setup.k,
-                        RTreeParameters{m, M}, times);
+      // Локальное дерево по индексируемому подмножеству (не трогаем общее
+      // приложенческое дерево, которое использует Demo и расчёт памяти).
+      rtree::RTree<double> tree(M, m, dims);
+      tree.BulkLoad(std::vector<const rtree::Object<double>*>(split.indexed));
+      state.m_TestKnnState.progress.currentParams = RTreeParameters{m, M};
+      std::vector<double> times = RunTestKnn(state, tree, split.queries);
+      SaveTestKnnResult(resultsDir, state.m_TestKnnState.setup.k, queryCount,
+                        indexedCount, RTreeParameters{m, M}, times);
       state.m_TestKnnState.progress.runsDone++;
       state.m_TestKnnState.progress.epochsDone = 0;
     }
@@ -67,14 +85,15 @@ inline void TestKnnThreadTarget(AppState& state) {
   }
 }
 
-inline std::vector<double> TestKnn(AppState& state) {
+inline std::vector<double> RunTestKnn(
+    AppState& state,
+    const rtree::RTree<double>& tree,
+    const std::vector<const rtree::Object<double>*>& queries) {
   std::vector<double> times;
   times.reserve(state.m_TestKnnState.setup.epochs);
-  const auto tree = state.GetRTree();
   for (size_t i = 0; i < state.m_TestKnnState.setup.epochs; ++i) {
     auto time = Measures::RunMeasure([&]() -> void {
-      TestKnnEpoch(state.m_TestKnnState.setup.k, state.m_Objects,
-                           *tree);
+      TestKnnEpoch(state.m_TestKnnState.setup.k, queries, tree);
     });
     times.push_back(time.count());
     state.m_TestKnnState.progress.epochsDone++;
@@ -84,18 +103,23 @@ inline std::vector<double> TestKnn(AppState& state) {
 
 template <typename T>
 inline void TestKnnEpoch(const int& k,
-                         const std::vector<rtree::Object<T>>& objects,
+                         const std::vector<const rtree::Object<T>*>& queries,
                          const rtree::RTree<T>& rtree) {
-  for (const auto& obj : objects) {
-    rtree.kNN(obj.mbr, k);
+  for (const auto* q : queries) {
+    rtree.kNN(q->mbr, k);
   }
 }
 
-inline void SaveTestKnnResult(const std::string& resultsDir, const int& k,
+inline void SaveTestKnnResult(const std::string& resultsDir,
+                              const int& k,
+                              const std::size_t& queryCount,
+                              const std::size_t& indexedCount,
                               const RTreeParameters& params,
                               const std::vector<double>& times) {
-  const std::string filename = resultsDir + "/" + std::to_string(k) + "_" +
-                               std::to_string(params.maxEntries) + ".npy";
+  const std::string filename =
+      resultsDir + "/indexed=" + std::to_string(indexedCount) +
+      "_queries=" + std::to_string(queryCount) + "_k=" + std::to_string(k) +
+      "_M=" + std::to_string(params.maxEntries) + ".npy";
 
   const double* dataPtr = times.data();
   npy::shape_t shape{(npy::ndarray_len_t)times.size()};

@@ -1,7 +1,13 @@
 #pragma once
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <format>
+#include <numeric>
+#include <random>
 #include <string>
+#include <vector>
 
 #include "npy.hpp"
 #include "rtree.h"
@@ -122,6 +128,57 @@ inline npy::npy_data<double> ReadNpyAsDouble(const std::string& filePath) {
   throw std::runtime_error(
       "Неподдерживаемый тип данных NPY: '" + header.dtype.str() +
       "'. Ожидается числовой тип (float или integer).");
+}
+
+// Фиксированное зерно ГПСЧ для hold-out разбиения. Одинаковое во всех тестах,
+// чтобы разбиение было воспроизводимым и совпадало между реализациями kNN.
+constexpr std::uint32_t kQuerySeed = 12345;
+
+// Точное число запросов для hold-out: round(percent% * n), ограниченное снизу 1 и
+// сверху n-1 (хотя бы один запрос и один индексируемый объект). Для n < 2 → 0.
+// Единый источник истины для контроллеров и UI.
+inline std::size_t HoldoutQueryCount(std::size_t n, int percent) {
+  if (n < 2)
+    return 0;
+  return std::clamp<std::size_t>(
+      static_cast<std::size_t>(std::llround(percent / 100.0 * n)), 1, n - 1);
+}
+
+// Результат hold-out разбиения: указатели в исходный вектор объектов (без копий).
+// indexed годится напрямую для RTree::BulkLoad.
+template <typename T>
+struct HoldoutSplit {
+  std::vector<const rtree::Object<T>*> indexed;
+  std::vector<const rtree::Object<T>*> queries;
+};
+
+// Случайно откладывает percent% объектов в роли запросов (hold-out), остальные —
+// индексируемый набор; точное число вычисляется через HoldoutQueryCount.
+// Фиксированный seed даёт одинаковое разбиение. objects не модифицируется
+// (хранятся лишь указатели в него).
+template <typename T>
+inline HoldoutSplit<T> SplitHoldout(const std::vector<rtree::Object<T>>& objects,
+                                    int percent, std::uint32_t seed) {
+  const std::size_t n = objects.size();
+  const std::size_t count = HoldoutQueryCount(n, percent);
+
+  std::vector<std::size_t> indices(n);
+  std::iota(indices.begin(), indices.end(), std::size_t{0});
+  std::vector<std::size_t> chosen;
+  chosen.reserve(count);
+  std::sample(indices.begin(), indices.end(), std::back_inserter(chosen), count,
+              std::mt19937(seed));
+
+  std::vector<char> isQuery(n, 0);
+  for (std::size_t c : chosen)
+    isQuery[c] = 1;
+
+  HoldoutSplit<T> out;
+  out.indexed.reserve(n - count);
+  out.queries.reserve(count);
+  for (std::size_t j = 0; j < n; ++j)
+    (isQuery[j] ? out.queries : out.indexed).push_back(&objects[j]);
+  return out;
 }
 
 }  // namespace Utils

@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <thread>
 
@@ -49,6 +51,7 @@ inline void TestDatasetsThreadTarget(AppState& state) {
     const int M = setup.maxEntries;
     const int m = setup.minEntries;
     const int k = setup.k;
+    const int queryPercent = setup.queryPercent;
     const int measurements = setup.CalculateMeasurements();
 
     if (measurements <= 0)
@@ -89,26 +92,34 @@ inline void TestDatasetsThreadTarget(AppState& state) {
 
       progress.epochsDone = 0;
 
+      if (n < 2)
+        throw std::runtime_error(
+            "Набор «" + datasetName +
+            "» слишком мал для hold-out (нужно ≥ 2 объектов).");
+      auto split =
+          Utils::SplitHoldout(objects, queryPercent, Utils::kQuerySeed);
+      const std::size_t indexedCount = split.indexed.size();
+      const std::size_t queryCount = split.queries.size();
+
       auto tree = std::make_unique<rtree::RTree<double>>(M, m, dims);
-      std::vector<const rtree::Object<double>*> objectPtrs;
-      objectPtrs.reserve(objects.size());
-      for (const auto& obj : objects)
-        objectPtrs.push_back(&obj);
-      tree->BulkLoad(std::move(objectPtrs));
+      tree->BulkLoad(std::vector<const rtree::Object<double>*>(split.indexed));
 
       std::vector<double> times;
       times.reserve(setup.epochs);
       for (int e = 0; e < setup.epochs; ++e) {
         auto elapsed = Measures::RunMeasure([&]() {
-          for (const auto& obj : objects)
-            tree->kNN(obj.mbr, k);
+          for (const auto* q : split.queries)
+            tree->kNN(q->mbr, k);
         });
         times.push_back(elapsed.count());
         progress.epochsDone++;
       }
 
-      const std::string filename =
-          resultsDir + "/" + datasetName + "_results.npy";
+      const std::string filename = resultsDir + "/" + datasetName +
+                                   "_indexed=" + std::to_string(indexedCount) +
+                                   "_queries=" + std::to_string(queryCount) +
+                                   "_M=" + std::to_string(M) +
+                                   "_k=" + std::to_string(k) + ".npy";
       npy::npy_data_ptr<double> out{
           times.data(), {(npy::ndarray_len_t)times.size()}, false};
       std::printf("Saving %s\n", filename.c_str());

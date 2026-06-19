@@ -118,6 +118,7 @@ struct TestKSetupState {
   int kStep;
   int maxEntries;
   int epochs;
+  int queryPercent;
 
   void Reset() {
     kMin = 1;
@@ -125,6 +126,7 @@ struct TestKSetupState {
     kStep = 1;
     maxEntries = 4;
     epochs = 10;
+    queryPercent = 10;
   }
 
   TestKSetupState() { Reset(); }
@@ -173,6 +175,7 @@ struct TestDatasetsSetupState {
   int maxEntries;
   int epochs;
   int k;
+  int queryPercent;
   std::vector<std::string> selectedFiles;
 
   void Reset() {
@@ -180,6 +183,7 @@ struct TestDatasetsSetupState {
     maxEntries = 4;
     epochs = 10;
     k = 5;
+    queryPercent = 10;
     selectedFiles.clear();
   }
 
@@ -238,11 +242,13 @@ enum class TestDatasetsNaivePhase { Setup, Progress, Results };
 struct TestDatasetsNaiveSetupState {
   int epochs;
   int k;
+  int queryPercent;
   std::vector<std::string> selectedFiles;
 
   void Reset() {
     epochs = 10;
     k = 5;
+    queryPercent = 10;
     selectedFiles.clear();
   }
 
@@ -300,6 +306,7 @@ struct TestKnnSetupState {
   std::vector<RTreeParameters> params;
   int k;
   int epochs;
+  int queryPercent;
 
   int paramsInput[2];  // min, max
 
@@ -309,6 +316,7 @@ struct TestKnnSetupState {
     params.clear();
     k = 5;
     epochs = 10;
+    queryPercent = 10;
 
     paramsInput[0] = 2;
     paramsInput[1] = 4;
