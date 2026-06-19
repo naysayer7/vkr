@@ -8,6 +8,7 @@
 #include "npy.hpp"
 #include "rtree.h"
 #include "state.hpp"
+#include "utils.hpp"
 
 namespace Controllers {
 
@@ -95,7 +96,7 @@ inline void TestDatasetsNaiveThreadTarget(AppState& state) {
           std::filesystem::path(filePath).stem().string();
       progress.SetCurrentDataset(datasetName);
 
-      npy::npy_data<float> data = npy::read_npy<float>(filePath);
+      npy::npy_data<double> data = Utils::ReadNpyAsDouble(filePath);
       if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
         throw std::runtime_error(
             "Неверный формат файла «" +
@@ -105,10 +106,10 @@ inline void TestDatasetsNaiveThreadTarget(AppState& state) {
       const std::size_t n = data.shape[0];
       const std::size_t dims = data.shape[1] / 2;
 
-      std::vector<rtree::Object<float>> objects;
+      std::vector<rtree::Object<double>> objects;
       objects.reserve(n);
       for (std::size_t j = 0; j < n; ++j) {
-        rtree::Rectangle<float> rect(dims);
+        rtree::Rectangle<double> rect(dims);
         for (std::size_t d = 0; d < data.shape[1]; ++d)
           rect.size[d] = data.data[j * data.shape[1] + d];
         objects.emplace_back(static_cast<uint64_t>(j), rect);
