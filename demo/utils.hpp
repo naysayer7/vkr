@@ -1,7 +1,11 @@
 #pragma once
 #include <chrono>
+#include <cstdint>
 #include <format>
+#include <limits>
+#include <random>
 #include <string>
+#include <vector>
 
 #include "npy.hpp"
 #include "rtree.h"
@@ -122,6 +126,61 @@ inline npy::npy_data<double> ReadNpyAsDouble(const std::string& filePath) {
   throw std::runtime_error(
       "Неподдерживаемый тип данных NPY: '" + header.dtype.str() +
       "'. Ожидается числовой тип (float или integer).");
+}
+
+// Покоординатные границы набора: mins[d]/maxs[d] — минимальная нижняя и
+// максимальная верхняя граница объектов по каждому измерению.
+struct Bounds {
+  std::vector<double> mins;
+  std::vector<double> maxs;
+};
+
+// Вычисляет ограничивающий прямоугольник набора. Данные — 2D массив, каждая
+// строка из 2*dims чисел: первые dims — нижние границы, вторые dims —
+// протяжённости (как в Rectangle), поэтому верхняя граница = нижняя + протяжённость.
+inline Bounds ComputeBounds(const npy::npy_data<double>& data) {
+  const std::size_t cols = data.shape[1];
+  const std::size_t dims = cols / 2;
+  Bounds b{std::vector<double>(dims, std::numeric_limits<double>::max()),
+           std::vector<double>(dims, std::numeric_limits<double>::lowest())};
+  for (std::size_t j = 0; j < data.shape[0]; ++j) {
+    for (std::size_t d = 0; d < dims; ++d) {
+      const double lower = data.data[j * cols + d];
+      const double upper = lower + data.data[j * cols + d + dims];
+      b.mins[d] = std::min(b.mins[d], lower);
+      b.maxs[d] = std::max(b.maxs[d], upper);
+    }
+  }
+  return b;
+}
+
+// Фиксированное зерно ГПСЧ для точек запроса. Одинаковое во всех тестах
+constexpr std::uint32_t kQuerySeed = 12345;
+
+// Генерирует count точек запроса, равномерно случайно распределённых внутри
+// заданных границ. Каждая точка — вырожденный Rectangle (протяжённость 0).
+// Фиксированный seed обеспечивает воспроизводимость и одинаковый набор запросов
+// для разных реализаций kNN.
+inline std::vector<rtree::Rectangle<double>> GenerateUniformQueries(
+    const Bounds& bounds, std::size_t count, std::uint32_t seed) {
+  const std::size_t dims = bounds.mins.size();
+  std::mt19937 rng(seed);
+  std::vector<std::uniform_real_distribution<double>> dist;
+  dist.reserve(dims);
+  for (std::size_t d = 0; d < dims; ++d)
+    dist.emplace_back(bounds.mins[d], bounds.maxs[d]);
+
+  std::vector<rtree::Rectangle<double>> queries;
+  queries.reserve(count);
+  for (std::size_t q = 0; q < count; ++q) {
+    rtree::Rectangle<double> rect(dims);
+    for (std::size_t d = 0; d < dims; ++d) {
+      rect.size[d] = dist[d](rng);
+      rect.size[d + dims] = 0.0;
+    }
+    queries.push_back(std::move(rect));
+  }
+  return queries;
 }
 
 }  // namespace Utils

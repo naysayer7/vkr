@@ -77,6 +77,7 @@ inline void TestDatasetsNaiveThreadTarget(AppState& state) {
     progress.Reset();
 
     const int k = setup.k;
+    const int queryCount = setup.queryCount;
     const int measurements = setup.CalculateMeasurements();
 
     if (measurements <= 0)
@@ -117,12 +118,16 @@ inline void TestDatasetsNaiveThreadTarget(AppState& state) {
 
       progress.epochsDone = 0;
 
+      const Utils::Bounds bounds = Utils::ComputeBounds(data);
+      const auto queries = Utils::GenerateUniformQueries(
+          bounds, static_cast<std::size_t>(queryCount), Utils::kQuerySeed);
+
       std::vector<double> times;
       times.reserve(setup.epochs);
       for (int e = 0; e < setup.epochs; ++e) {
         auto elapsed = Measures::RunMeasure([&]() {
-          for (const auto& obj : objects)
-            NaiveKnn(objects, obj.mbr, k);
+          for (const auto& q : queries)
+            NaiveKnn(objects, q, k);
         });
         times.push_back(elapsed.count());
         progress.epochsDone++;

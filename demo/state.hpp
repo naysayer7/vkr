@@ -173,6 +173,7 @@ struct TestDatasetsSetupState {
   int maxEntries;
   int epochs;
   int k;
+  int queryCount;
   std::vector<std::string> selectedFiles;
 
   void Reset() {
@@ -180,6 +181,7 @@ struct TestDatasetsSetupState {
     maxEntries = 4;
     epochs = 10;
     k = 5;
+    queryCount = 1000;
     selectedFiles.clear();
   }
 
@@ -238,11 +240,13 @@ enum class TestDatasetsNaivePhase { Setup, Progress, Results };
 struct TestDatasetsNaiveSetupState {
   int epochs;
   int k;
+  int queryCount;
   std::vector<std::string> selectedFiles;
 
   void Reset() {
     epochs = 10;
     k = 5;
+    queryCount = 1000;
     selectedFiles.clear();
   }
 
