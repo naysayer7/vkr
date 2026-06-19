@@ -10,9 +10,9 @@
 
 namespace Controllers {
 
-void TestNThreadTarget(AppState& state);
+void TestDatasetsThreadTarget(AppState& state);
 
-inline void SelectTestNFiles(TestNSetupState& setup) {
+inline void SelectTestDatasetsFiles(TestDatasetsSetupState& setup) {
   const char* result =
       tinyfd_openFileDialog("Выберите NPY файлы", "", 0, nullptr, nullptr, 1);
   if (!result || result[0] == '\0')
@@ -31,17 +31,17 @@ inline void SelectTestNFiles(TestNSetupState& setup) {
   }
 }
 
-inline void StartTestN() {
+inline void StartTestDatasets() {
   AppState& state = AppState::instance();
-  state.m_TestNState.phase.store(TestNPhase::Progress);
-  std::thread t(TestNThreadTarget, std::ref(state));
+  state.m_TestDatasetsState.phase.store(TestDatasetsPhase::Progress);
+  std::thread t(TestDatasetsThreadTarget, std::ref(state));
   t.detach();
 }
 
-inline void TestNThreadTarget(AppState& state) {
+inline void TestDatasetsThreadTarget(AppState& state) {
   try {
-    TestNProgressState& progress = state.m_TestNState.progress;
-    const TestNSetupState& setup = state.m_TestNState.setup;
+    TestDatasetsProgressState& progress = state.m_TestDatasetsState.progress;
+    const TestDatasetsSetupState& setup = state.m_TestDatasetsState.setup;
 
     progress.Reset();
 
@@ -57,12 +57,15 @@ inline void TestNThreadTarget(AppState& state) {
     progress.epochs = setup.epochs;
 
     const std::string resultsDir = std::filesystem::current_path().string() +
-                                   "/results/n/" +
+                                   "/results/datasets/" +
                                    std::to_string(std::time(nullptr));
     std::filesystem::create_directories(resultsDir);
 
     for (int i = 0; i < measurements; ++i) {
       const std::string& filePath = setup.selectedFiles[i];
+      const std::string datasetName =
+          std::filesystem::path(filePath).stem().string();
+      progress.SetCurrentDataset(datasetName);
 
       npy::npy_data<float> data = npy::read_npy<float>(filePath);
       if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
@@ -83,7 +86,6 @@ inline void TestNThreadTarget(AppState& state) {
         objects.emplace_back(static_cast<uint64_t>(j), rect);
       }
 
-      progress.currentN = static_cast<int>(n);
       progress.epochsDone = 0;
 
       auto tree = std::make_unique<rtree::RTree<float>>(M, m, dims);
@@ -104,8 +106,8 @@ inline void TestNThreadTarget(AppState& state) {
         progress.epochsDone++;
       }
 
-      const std::string filename = resultsDir + "/" + std::to_string(n) + "_" +
-                                   std::to_string(k) + "_" + std::to_string(M) + ".npy";
+      const std::string filename =
+          resultsDir + "/" + datasetName + "_results.npy";
       npy::npy_data_ptr<double> out{
           times.data(), {(npy::ndarray_len_t)times.size()}, false};
       std::printf("Saving %s\n", filename.c_str());
@@ -114,10 +116,10 @@ inline void TestNThreadTarget(AppState& state) {
       progress.done++;
     }
 
-    state.m_TestNState.phase.store(TestNPhase::Results);
+    state.m_TestDatasetsState.phase.store(TestDatasetsPhase::Results);
   } catch (const std::exception& e) {
     Error::Handle(e);
-    state.m_TestNState.phase.store(TestNPhase::Setup);
+    state.m_TestDatasetsState.phase.store(TestDatasetsPhase::Setup);
   }
 }
 

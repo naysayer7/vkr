@@ -2,6 +2,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -10,16 +11,16 @@
 #include "rtree.h"
 
 enum class State {
-  MainMenu,       // Начальное меню
-  DemoSetup,      // Настройка параметров дерева перед демо
-  Demo,           // Демонстрация работы R-дерева
-  FileReading,    // Чтение NPY файла
-  BuildingRTree,  // Построение R-дерева после чтения файла
-  TestKnn,        // Тестирование производительности KNN-запросов
-  TestMemory,     // Тестирование использования памяти
-  TestN,          // Тестирование KNN по количеству объектов
-  TestNNaive,     // Тестирование наивного KNN (перебор) по числу объектов
-  TestK,          // Тестирование KNN по параметру k
+  MainMenu,           // Начальное меню
+  DemoSetup,          // Настройка параметров дерева перед демо
+  Demo,               // Демонстрация работы R-дерева
+  FileReading,        // Чтение NPY файла
+  BuildingRTree,      // Построение R-дерева после чтения файла
+  TestKnn,            // Тестирование производительности KNN-запросов
+  TestMemory,         // Тестирование использования памяти
+  TestDatasets,       // Тестирование KNN по наборам данных
+  TestDatasetsNaive,  // Тестирование наивного KNN (перебор) по наборам данных
+  TestK,              // Тестирование KNN по параметру k
 };
 
 struct BuildingRTreeState {
@@ -165,9 +166,9 @@ struct TestKState {
   }
 };
 
-enum class TestNPhase { Setup, Progress, Results };
+enum class TestDatasetsPhase { Setup, Progress, Results };
 
-struct TestNSetupState {
+struct TestDatasetsSetupState {
   int minEntries;
   int maxEntries;
   int epochs;
@@ -182,46 +183,59 @@ struct TestNSetupState {
     selectedFiles.clear();
   }
 
-  TestNSetupState() { Reset(); }
+  TestDatasetsSetupState() { Reset(); }
 
   int CalculateMeasurements() const {
     return static_cast<int>(selectedFiles.size());
   }
 };
 
-struct TestNProgressState {
+struct TestDatasetsProgressState {
   std::atomic<int> done;
   std::atomic<int> total;
   std::atomic<int> epochsDone;
   std::atomic<int> epochs;
-  std::atomic<int> currentN;
+
+  void SetCurrentDataset(std::string name) {
+    std::lock_guard lock(m_datasetMutex);
+    m_currentDataset = std::move(name);
+  }
+
+  std::string CurrentDataset() const {
+    std::lock_guard lock(m_datasetMutex);
+    return m_currentDataset;
+  }
 
   void Reset() {
     done = 0;
     total = 0;
     epochsDone = 0;
     epochs = 0;
-    currentN = 0;
+    SetCurrentDataset({});
   }
 
-  TestNProgressState() { Reset(); }
+  TestDatasetsProgressState() { Reset(); }
+
+ private:
+  mutable std::mutex m_datasetMutex;
+  std::string m_currentDataset;
 };
 
-struct TestNState {
-  std::atomic<TestNPhase> phase{TestNPhase::Setup};
-  TestNSetupState setup;
-  TestNProgressState progress;
+struct TestDatasetsState {
+  std::atomic<TestDatasetsPhase> phase{TestDatasetsPhase::Setup};
+  TestDatasetsSetupState setup;
+  TestDatasetsProgressState progress;
 
   void Reset() {
-    phase.store(TestNPhase::Setup);
-    setup = TestNSetupState{};
+    phase.store(TestDatasetsPhase::Setup);
+    setup = TestDatasetsSetupState{};
     progress.Reset();
   }
 };
 
-enum class TestNNaivePhase { Setup, Progress, Results };
+enum class TestDatasetsNaivePhase { Setup, Progress, Results };
 
-struct TestNNaiveSetupState {
+struct TestDatasetsNaiveSetupState {
   int epochs;
   int k;
   std::vector<std::string> selectedFiles;
@@ -232,39 +246,52 @@ struct TestNNaiveSetupState {
     selectedFiles.clear();
   }
 
-  TestNNaiveSetupState() { Reset(); }
+  TestDatasetsNaiveSetupState() { Reset(); }
 
   int CalculateMeasurements() const {
     return static_cast<int>(selectedFiles.size());
   }
 };
 
-struct TestNNaiveProgressState {
+struct TestDatasetsNaiveProgressState {
   std::atomic<int> done;
   std::atomic<int> total;
   std::atomic<int> epochsDone;
   std::atomic<int> epochs;
-  std::atomic<int> currentN;
+
+  void SetCurrentDataset(std::string name) {
+    std::lock_guard lock(m_datasetMutex);
+    m_currentDataset = std::move(name);
+  }
+
+  std::string CurrentDataset() const {
+    std::lock_guard lock(m_datasetMutex);
+    return m_currentDataset;
+  }
 
   void Reset() {
     done = 0;
     total = 0;
     epochsDone = 0;
     epochs = 0;
-    currentN = 0;
+    SetCurrentDataset({});
   }
 
-  TestNNaiveProgressState() { Reset(); }
+  TestDatasetsNaiveProgressState() { Reset(); }
+
+ private:
+  mutable std::mutex m_datasetMutex;
+  std::string m_currentDataset;
 };
 
-struct TestNNaiveState {
-  std::atomic<TestNNaivePhase> phase{TestNNaivePhase::Setup};
-  TestNNaiveSetupState setup;
-  TestNNaiveProgressState progress;
+struct TestDatasetsNaiveState {
+  std::atomic<TestDatasetsNaivePhase> phase{TestDatasetsNaivePhase::Setup};
+  TestDatasetsNaiveSetupState setup;
+  TestDatasetsNaiveProgressState progress;
 
   void Reset() {
-    phase.store(TestNNaivePhase::Setup);
-    setup = TestNNaiveSetupState{};
+    phase.store(TestDatasetsNaivePhase::Setup);
+    setup = TestDatasetsNaiveSetupState{};
     progress.Reset();
   }
 };
@@ -353,8 +380,8 @@ class AppState {
   DemoState m_DemoState;
   TestKnnState m_TestKnnState;
   TestMemoryState m_TestMemoryState;
-  TestNState m_TestNState;
-  TestNNaiveState m_TestNNaiveState;
+  TestDatasetsState m_TestDatasetsState;
+  TestDatasetsNaiveState m_TestDatasetsNaiveState;
   TestKState m_TestKState;
 
   void RecalculateMemorySize() {

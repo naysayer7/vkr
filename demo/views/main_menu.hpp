@@ -34,12 +34,12 @@ inline void MainMenu(bool& running, AppState& state) {
   ImGui::EndDisabled();
 
   ImGui::BeginDisabled(state.m_Objects.empty());
-  if (ImGui::Button("Тестирование наивного KNN по N объектов"))
-    state.SetCurrentState(State::TestNNaive);
+  if (ImGui::Button("Тестирование наивного KNN по наборам данных"))
+    state.SetCurrentState(State::TestDatasetsNaive);
   if (ImGui::Button("Тестирование KNN по M"))
     state.SetCurrentState(State::TestKnn);
-  if (ImGui::Button("Тестирование KNN по N объектов"))
-    state.SetCurrentState(State::TestN);
+  if (ImGui::Button("Тестирование KNN по наборам данных"))
+    state.SetCurrentState(State::TestDatasets);
   if (ImGui::Button("Тестирование KNN по k"))
     state.SetCurrentState(State::TestK);
   if (ImGui::Button("Тестирование памяти по M"))

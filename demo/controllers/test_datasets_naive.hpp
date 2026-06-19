@@ -11,7 +11,7 @@
 
 namespace Controllers {
 
-void TestNNaiveThreadTarget(AppState& state);
+void TestDatasetsNaiveThreadTarget(AppState& state);
 
 // Наивный kNN: перебор всех объектов с вычислением расстояния до запроса и
 // выбором k ближайших. Расстояния до всех объектов считаются за O(N), отбор k
@@ -42,7 +42,7 @@ inline std::vector<const rtree::Object<T>*> NaiveKnn(
   return result;
 }
 
-inline void SelectTestNNaiveFiles(TestNNaiveSetupState& setup) {
+inline void SelectTestDatasetsNaiveFiles(TestDatasetsNaiveSetupState& setup) {
   const char* result =
       tinyfd_openFileDialog("Выберите NPY файлы", "", 0, nullptr, nullptr, 1);
   if (!result || result[0] == '\0')
@@ -61,17 +61,17 @@ inline void SelectTestNNaiveFiles(TestNNaiveSetupState& setup) {
   }
 }
 
-inline void StartTestNNaive() {
+inline void StartTestDatasetsNaive() {
   AppState& state = AppState::instance();
-  state.m_TestNNaiveState.phase.store(TestNNaivePhase::Progress);
-  std::thread t(TestNNaiveThreadTarget, std::ref(state));
+  state.m_TestDatasetsNaiveState.phase.store(TestDatasetsNaivePhase::Progress);
+  std::thread t(TestDatasetsNaiveThreadTarget, std::ref(state));
   t.detach();
 }
 
-inline void TestNNaiveThreadTarget(AppState& state) {
+inline void TestDatasetsNaiveThreadTarget(AppState& state) {
   try {
-    TestNNaiveProgressState& progress = state.m_TestNNaiveState.progress;
-    const TestNNaiveSetupState& setup = state.m_TestNNaiveState.setup;
+    TestDatasetsNaiveProgressState& progress = state.m_TestDatasetsNaiveState.progress;
+    const TestDatasetsNaiveSetupState& setup = state.m_TestDatasetsNaiveState.setup;
 
     progress.Reset();
 
@@ -85,12 +85,15 @@ inline void TestNNaiveThreadTarget(AppState& state) {
     progress.epochs = setup.epochs;
 
     const std::string resultsDir = std::filesystem::current_path().string() +
-                                   "/results/n_naive/" +
+                                   "/results/datasets_naive/" +
                                    std::to_string(std::time(nullptr));
     std::filesystem::create_directories(resultsDir);
 
     for (int i = 0; i < measurements; ++i) {
       const std::string& filePath = setup.selectedFiles[i];
+      const std::string datasetName =
+          std::filesystem::path(filePath).stem().string();
+      progress.SetCurrentDataset(datasetName);
 
       npy::npy_data<float> data = npy::read_npy<float>(filePath);
       if (data.shape.size() != 2 || data.shape[1] % 2 != 0)
@@ -111,7 +114,6 @@ inline void TestNNaiveThreadTarget(AppState& state) {
         objects.emplace_back(static_cast<uint64_t>(j), rect);
       }
 
-      progress.currentN = static_cast<int>(n);
       progress.epochsDone = 0;
 
       std::vector<double> times;
@@ -125,8 +127,8 @@ inline void TestNNaiveThreadTarget(AppState& state) {
         progress.epochsDone++;
       }
 
-      const std::string filename = resultsDir + "/" + std::to_string(n) + "_" +
-                                   std::to_string(k) + ".npy";
+      const std::string filename =
+          resultsDir + "/" + datasetName + "_results.npy";
       npy::npy_data_ptr<double> out{
           times.data(), {(npy::ndarray_len_t)times.size()}, false};
       std::printf("Saving %s\n", filename.c_str());
@@ -135,10 +137,10 @@ inline void TestNNaiveThreadTarget(AppState& state) {
       progress.done++;
     }
 
-    state.m_TestNNaiveState.phase.store(TestNNaivePhase::Results);
+    state.m_TestDatasetsNaiveState.phase.store(TestDatasetsNaivePhase::Results);
   } catch (const std::exception& e) {
     Error::Handle(e);
-    state.m_TestNNaiveState.phase.store(TestNNaivePhase::Setup);
+    state.m_TestDatasetsNaiveState.phase.store(TestDatasetsNaivePhase::Setup);
   }
 }
 

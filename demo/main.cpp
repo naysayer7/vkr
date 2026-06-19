@@ -17,8 +17,8 @@
 #include "views/main_menu.hpp"
 #include "views/test_knn.hpp"
 #include "views/test_memory.hpp"
-#include "views/test_n.hpp"
-#include "views/test_n_naive.hpp"
+#include "views/test_datasets.hpp"
+#include "views/test_datasets_naive.hpp"
 #include "views/test_k.hpp"
 #include "widgets.hpp"
 
@@ -138,11 +138,11 @@ int main(int argc, char* argv[]) {
         case State::TestMemory:
           Views::TestMemory(running, state.m_TestMemoryState);
           break;
-        case State::TestN:
-          Views::TestN(running, state.m_TestNState);
+        case State::TestDatasets:
+          Views::TestDatasets(running, state.m_TestDatasetsState);
           break;
-        case State::TestNNaive:
-          Views::TestNNaive(running, state.m_TestNNaiveState);
+        case State::TestDatasetsNaive:
+          Views::TestDatasetsNaive(running, state.m_TestDatasetsNaiveState);
           break;
         case State::TestK:
           Views::TestK(running, state.m_TestKState);
