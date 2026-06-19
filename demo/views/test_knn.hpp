@@ -93,7 +93,8 @@ inline void TestKnnProgress(TestKnnProgressState& state) {
 }
 
 inline void TestKnnResults() {
-  RenderTestResults({"Расположение: results/knn/", "Формат файлов: {k}_{M}.npy",
+  RenderTestResults({"Расположение: results/knn/",
+                     "Формат файлов: indexed={N}_queries={Q}_k={k}_M={M}.npy",
                      "Запросы: hold-out — часть объектов исключена из индекса.",
                      "Каждый файл — 1D массив времён (нс) по эпохам."},
                     [] { AppState::instance().m_TestKnnState.Reset(); });

@@ -117,7 +117,7 @@ inline void TestDatasetsProgress(TestDatasetsProgressState& state) {
 inline void TestDatasetsResults() {
   RenderTestResults(
       {"Расположение: results/datasets/",
-       "Формат файлов: {название_датасета}_results.npy",
+       "Формат файлов: {датасет}_indexed={N}_queries={Q}_M={M}_k={k}.npy",
        "Каждый файл — 1D массив времён (нс) по эпохам.",
        "Запросы: hold-out — часть объектов исключена из индекса."},
       [] { AppState::instance().m_TestDatasetsState.Reset(); });

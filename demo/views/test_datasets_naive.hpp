@@ -115,7 +115,7 @@ inline void TestDatasetsNaiveProgress(TestDatasetsNaiveProgressState& state) {
 inline void TestDatasetsNaiveResults() {
   RenderTestResults(
       {"Расположение: results/datasets_naive/",
-       "Формат файлов: {название_датасета}_results.npy",
+       "Формат файлов: {датасет}_indexed={N}_queries={Q}_k={k}.npy",
        "Каждый файл — 1D массив времён (нс) по эпохам.",
        "Запросы: hold-out — часть объектов исключена из набора."},
       [] { AppState::instance().m_TestDatasetsNaiveState.Reset(); });

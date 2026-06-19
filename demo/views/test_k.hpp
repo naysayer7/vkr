@@ -105,8 +105,9 @@ inline void TestKProgress(TestKProgressState& state) {
 
 inline void TestKResults() {
   RenderTestResults(
-      {"Расположение: results/k/", "Формат файлов: {n}_{k}_{M}.npy",
-       "n — размер индекса после hold-out (исключены запросы).",
+      {"Расположение: results/k/",
+       "Формат файлов: indexed={N}_queries={Q}_k={k}_M={M}.npy",
+       "N — размер индекса после hold-out (исключены запросы).",
        "Каждый файл — 1D массив времён (нс) по эпохам."},
       [] { AppState::instance().m_TestKState.Reset(); });
 }
