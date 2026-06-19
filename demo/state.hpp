@@ -55,7 +55,7 @@ struct DemoState {
 
 struct RTreeParameters {
   int minEntries = 2;
-  int maxEntries = 4;
+  int maxEntries = 20;
 };
 
 enum class TestKnnPhase { Setup, Progress, Results };
@@ -124,7 +124,7 @@ struct TestKSetupState {
     kMin = 1;
     kMax = 20;
     kStep = 1;
-    maxEntries = 4;
+    maxEntries = 20;
     epochs = 10;
     queryPercent = 10;
   }
@@ -171,7 +171,6 @@ struct TestKState {
 enum class TestDatasetsPhase { Setup, Progress, Results };
 
 struct TestDatasetsSetupState {
-  int minEntries;
   int maxEntries;
   int epochs;
   int k;
@@ -179,10 +178,9 @@ struct TestDatasetsSetupState {
   std::vector<std::string> selectedFiles;
 
   void Reset() {
-    minEntries = 2;
-    maxEntries = 4;
+    maxEntries = 20;
     epochs = 10;
-    k = 5;
+    k = 20;
     queryPercent = 10;
     selectedFiles.clear();
   }
@@ -247,7 +245,7 @@ struct TestDatasetsNaiveSetupState {
 
   void Reset() {
     epochs = 10;
-    k = 5;
+    k = 20;
     queryPercent = 10;
     selectedFiles.clear();
   }
@@ -314,7 +312,7 @@ struct TestKnnSetupState {
 
   void Reset() {
     params.clear();
-    k = 5;
+    k = 20;
     epochs = 10;
     queryPercent = 10;
 
@@ -322,7 +320,7 @@ struct TestKnnSetupState {
     paramsInput[1] = 4;
 
     maxObjects[0] = 1;
-    maxObjects[1] = 10;
+    maxObjects[1] = 20;
   }
 
   TestKnnSetupState() { Reset(); }

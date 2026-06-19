@@ -43,14 +43,11 @@ inline void TestDatasetsSetup(TestDatasetsSetupState& state) {
   ImGui::Separator();
 
   ImGui::InputInt("M (maxEntries)", &state.maxEntries);
-  ImGui::InputInt("m (minEntries)", &state.minEntries);
   ImGui::InputInt("Эпох на измерение", &state.epochs);
   ImGui::InputInt("k для kNN", &state.k);
   ImGui::SliderInt("Доля запросов (hold-out), %", &state.queryPercent, 1, 99);
 
   state.maxEntries = std::max(state.maxEntries, 2);
-  state.minEntries =
-      std::max(1, std::min(state.minEntries, (state.maxEntries + 1) / 2));
   state.epochs = std::max(state.epochs, 1);
   state.k = std::max(state.k, 1);
   state.queryPercent = std::clamp(state.queryPercent, 1, 99);

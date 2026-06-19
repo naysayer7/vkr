@@ -49,7 +49,8 @@ inline void TestDatasetsThreadTarget(AppState& state) {
     progress.Reset();
 
     const int M = setup.maxEntries;
-    const int m = setup.minEntries;
+    // STR (bulk-load) не использует нижнюю границу m; берём валидное (M + 1) / 2.
+    const int m = (M + 1) / 2;
     const int k = setup.k;
     const int queryPercent = setup.queryPercent;
     const int measurements = setup.CalculateMeasurements();
