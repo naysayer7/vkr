@@ -44,6 +44,8 @@ inline void MainMenu(bool& running, AppState& state) {
     state.SetCurrentState(State::TestK);
   if (ImGui::Button("Тестирование памяти по M"))
     state.SetCurrentState(State::TestMemory);
+  if (ImGui::Button("Тестирование памяти по наборам данных"))
+    state.SetCurrentState(State::TestMemoryDatasets);
 
   ImGui::Separator();
   if (state.m_Objects.empty()) {

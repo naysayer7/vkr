@@ -17,7 +17,8 @@ enum class State {
   FileReading,        // Чтение NPY файла
   BuildingRTree,      // Построение R-дерева после чтения файла
   TestKnn,            // Тестирование производительности KNN-запросов
-  TestMemory,         // Тестирование использования памяти
+  TestMemory,         // Тестирование использования памяти по M
+  TestMemoryDatasets, // Тестирование использования памяти по наборам данных
   TestDatasets,       // Тестирование KNN по наборам данных
   TestDatasetsNaive,  // Тестирование наивного KNN (перебор) по наборам данных
   TestK,              // Тестирование KNN по параметру k
@@ -105,6 +106,80 @@ struct TestMemoryState {
   void Reset() {
     phase.store(TestMemoryPhase::Setup);
     setup = TestMemorySetupState{};
+    progress.Reset();
+    result.Reset();
+  }
+};
+
+enum class TestMemoryDatasetsPhase { Setup, Progress, Results };
+
+struct TestMemoryDatasetsSetupState {
+  int maxEntries;
+  std::vector<std::string> selectedFiles;
+
+  void Reset() {
+    maxEntries = 20;
+    selectedFiles.clear();
+  }
+
+  TestMemoryDatasetsSetupState() { Reset(); }
+
+  int CalculateMeasurements() const {
+    return static_cast<int>(selectedFiles.size());
+  }
+};
+
+struct TestMemoryDatasetsProgressState {
+  std::atomic<int> done;
+  std::atomic<int> total;
+
+  void SetCurrentDataset(std::string name) {
+    std::lock_guard lock(m_datasetMutex);
+    m_currentDataset = std::move(name);
+  }
+
+  std::string CurrentDataset() const {
+    std::lock_guard lock(m_datasetMutex);
+    return m_currentDataset;
+  }
+
+  void Reset() {
+    done = 0;
+    total = 0;
+    SetCurrentDataset({});
+  }
+
+  TestMemoryDatasetsProgressState() { Reset(); }
+
+ private:
+  mutable std::mutex m_datasetMutex;
+  std::string m_currentDataset;
+};
+
+struct TestMemoryDatasetsResultState {
+  struct Entry {
+    std::string name;
+    std::size_t indexedCount;
+    std::size_t memory;
+  };
+  std::vector<Entry> entries;
+  std::string savedFilename;
+
+  void Reset() {
+    entries.clear();
+    savedFilename.clear();
+  }
+};
+
+struct TestMemoryDatasetsState {
+  std::atomic<TestMemoryDatasetsPhase> phase{TestMemoryDatasetsPhase::Setup};
+  TestMemoryDatasetsSetupState setup;
+  TestMemoryDatasetsProgressState progress;
+  TestMemoryDatasetsResultState result;
+
+  void Reset() {
+    phase.store(TestMemoryDatasetsPhase::Setup);
+    setup = TestMemoryDatasetsSetupState{};
     progress.Reset();
     result.Reset();
   }
@@ -386,6 +461,7 @@ class AppState {
   DemoState m_DemoState;
   TestKnnState m_TestKnnState;
   TestMemoryState m_TestMemoryState;
+  TestMemoryDatasetsState m_TestMemoryDatasetsState;
   TestDatasetsState m_TestDatasetsState;
   TestDatasetsNaiveState m_TestDatasetsNaiveState;
   TestKState m_TestKState;
