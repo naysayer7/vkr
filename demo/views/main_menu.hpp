@@ -32,25 +32,30 @@ inline void MainMenu(bool& running, AppState& state) {
   if (ImGui::Button("Демонстрация"))
     state.SetCurrentState(State::DemoSetup);
   ImGui::EndDisabled();
+  if (state.m_Objects.empty()) {
+    ImGui::Text(
+        "Загрузите NPY файл с точками (<= 15000) в 2D, чтобы начать демонстрацию.");
+  }
 
-  ImGui::BeginDisabled(state.m_Objects.empty());
   if (ImGui::Button("Тестирование наивного KNN по наборам данных"))
     state.SetCurrentState(State::TestDatasetsNaive);
-  if (ImGui::Button("Тестирование KNN по M"))
-    state.SetCurrentState(State::TestKnn);
   if (ImGui::Button("Тестирование KNN по наборам данных"))
     state.SetCurrentState(State::TestDatasets);
+  if (ImGui::Button("Тестирование памяти по наборам данных"))
+    state.SetCurrentState(State::TestMemoryDatasets);
+
+  ImGui::BeginDisabled(state.m_Objects.empty());
+  if (ImGui::Button("Тестирование KNN по M"))
+    state.SetCurrentState(State::TestKnn);
   if (ImGui::Button("Тестирование KNN по k"))
     state.SetCurrentState(State::TestK);
   if (ImGui::Button("Тестирование памяти по M"))
     state.SetCurrentState(State::TestMemory);
-  if (ImGui::Button("Тестирование памяти по наборам данных"))
-    state.SetCurrentState(State::TestMemoryDatasets);
+  ImGui::EndDisabled();
 
   ImGui::Separator();
   if (state.m_Objects.empty()) {
-    ImGui::Text(
-        "Загрузите NPY файл, чтобы начать демонстрацию и тестирование.");
+    ImGui::Text("Загрузите NPY файл, чтобы начать тестирование.");
   } else {
     ImGui::Text("Объектов: %zu", state.GetObjectsCount());
     if (state.GetRTree()) {
@@ -59,7 +64,6 @@ inline void MainMenu(bool& running, AppState& state) {
                   state.GetRTreeMemorySize() / (1024.0f * 1024.0f));
     }
   }
-  ImGui::EndDisabled();
 
   ImGui::End();
 }
